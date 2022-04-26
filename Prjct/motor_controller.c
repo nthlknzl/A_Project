@@ -7,6 +7,8 @@
 #include <motors.h>
 #include <position_awareness.h>
 
+#define BASE_SPEED 500
+
 static THD_WORKING_AREA(waMotorController, 256);
 static THD_FUNCTION(MotorController, arg) {
     chRegSetThreadName(__FUNCTION__);
@@ -18,15 +20,34 @@ static THD_FUNCTION(MotorController, arg) {
     int16_t speed_right = 0;
     int16_t lr_error = 0;
 
+    float Kp = 0.1;
+    float Ki = 0.1;
+
+    static integral_error = 0;
+
     while(1){
         time = chVTGetSystemTime();
 
         // get left-right error
         lr_error = get_left_right_error();
 
-        //debug code
-        speed_left = lr_error;
-        speed_right = lr_error;
+        // P
+        speed_left += Kp * lr_error;
+        speed_right -= Kp * lr_error;
+
+        // I
+        integral_error += lr_error;
+        if(integral_error > BASE_SPEED/Ki){integral_error = BASE_SPEED/Ki;}
+        else if(integral_error < - BASE_SPEED/Ki){integral_error = -BASE_SPEED/Ki;}
+        speed_left += Ki * integral_error;
+        speed_right -= Ki * integral_error;
+
+
+        speed_left += BASE_SPEED;
+        speed_right -= BASE_SPEED;
+
+
+
 
 
         // check that the speed is within the allowed limits
@@ -37,8 +58,13 @@ static THD_FUNCTION(MotorController, arg) {
 
 
         //applies the speed from the PI regulator
+        /*
 		right_motor_set_speed(speed_right);
 		left_motor_set_speed(speed_left);
+		*/
+
+        right_motor_set_speed(speed_right);
+        left_motor_set_speed(speed_left);
 
         //100Hz
         chThdSleepUntilWindowed(time, time + MS2ST(10));

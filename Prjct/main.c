@@ -14,8 +14,13 @@
 
 #include <pi_regulator.h>
 #include <process_image.h>
+#include <motor_controller.h>
 
 #include <arm_math.h>
+
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size)
 {
@@ -43,6 +48,8 @@ int main(void)
     chSysInit();
     mpu_init();
 
+    messagebus_init(&bus, &bus_lock, &bus_condvar);
+
     //starts the serial communication
     serial_start();
     //starts the USB communication
@@ -56,6 +63,11 @@ int main(void)
 	//starts the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
 	process_image_start();
+
+	proximity_start();
+	calibrate_ir();
+
+	motor_controller_start();
 
 
     /* Infinite loop. */
