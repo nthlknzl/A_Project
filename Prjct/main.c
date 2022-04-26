@@ -10,6 +10,7 @@
 #include <chprintf.h>
 #include <motors.h>
 #include <camera/po8030.h>
+#include <position_awareness.h>
 
 #include <pi_regulator.h>
 #include <process_image.h>
@@ -61,6 +62,12 @@ int main(void)
     while (1) {
     	//waits 1 second
         chThdSleepMilliseconds(1000);
+
+        // test code to test teh pos awareness
+        int diff = get_left_right_error();
+        chThdSleepMilliseconds(500);
+        chprintf((BaseSequentialStream *)&SD3, "left-right difference: %d \r\n", diff);
+        // end test pos awareness
     }
 }
 
