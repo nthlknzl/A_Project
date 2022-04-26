@@ -50,6 +50,10 @@ int get_left_right_error( void ){
 		// there is no wall -> return a zero error.
 		error = 0;
 	}
+
+	// we limit the maximal error as the values get extreamly high at close distances -> no effective control possible.
+	if (error > 500){error = 500;}
+	else if (error < -500){error = -500;}
 	return error;
 }
 

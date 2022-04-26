@@ -37,14 +37,15 @@ static THD_FUNCTION(MotorController, arg) {
 
         // I
         integral_error += lr_error;
-        if(integral_error > BASE_SPEED/Ki){integral_error = BASE_SPEED/Ki;}
-        else if(integral_error < - BASE_SPEED/Ki){integral_error = -BASE_SPEED/Ki;}
+        if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
+        else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;}
+        /*
         speed_left += Ki * integral_error;
         speed_right -= Ki * integral_error;
-
+*/
 
         speed_left += BASE_SPEED;
-        speed_right -= BASE_SPEED;
+        speed_right += BASE_SPEED;
 
 
 
@@ -58,16 +59,14 @@ static THD_FUNCTION(MotorController, arg) {
 
 
         //applies the speed from the PI regulator
-        /*
-		right_motor_set_speed(speed_right);
-		left_motor_set_speed(speed_left);
-		*/
 
         right_motor_set_speed(speed_right);
         left_motor_set_speed(speed_left);
 
-        //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(10));
+        chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
+
+        //20Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(50));
     }
 }
 
