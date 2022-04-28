@@ -11,6 +11,14 @@ extern "C" {
 
 
 
+
+/*
+#define NOTHING_DETECTED 		0
+#define RISING_EDGE_DETECTED 	1
+#define FALLING_EDGE_DETECTED 	1
+#define	LINE_DETECTED 			2
+*/
+
 //constants for process_image.c: image capture
 #define IMAGE_BUFFER_SIZE		480// 480 pixels in one column
 #define IMAGE_BUFFER_SIZE_SEND	640// 480 pixels in one column
@@ -24,11 +32,6 @@ extern "C" {
 #define CHECK_STEP 				10
 #define	EDGE_HEIGHT_MIN 		20
 
-//constants for process_image.c: line detection state
-#define NOTHING_DETECTED 		0
-#define RISING_EDGE_DETECTED 	1
-#define FALLING_EDGE_DETECTED 	1
-#define	LINE_DETECTED 			2
 
 //other constants for the differents parts of the project -> copied from TP4
 #define WIDTH_SLOPE				5
