@@ -131,8 +131,24 @@ void motor_controller_test( void ){
 	 * 4. right turn
 	 *
 	 */
+
+	// init the messagebus
+	enum motion_state initital_state = FORWARD_MOTION;
+	messagebus_topic_t motor_topic;
+	MUTEX_DECL(motor_topic_lock);
+	CONDVAR_DECL(motor_topic_condvar);
+	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
+	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
+
+
+	// start the thread with high priority
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO + 20, MotorController, NULL);
 
+	//enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
+	for(enum motion_state state = FORWARD_MOTION; state<=RIGHT_TURN; state++){
+		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
+		chThdSleepMicroseconds(5000);
+	}
 
 }
 
