@@ -9,6 +9,8 @@
 #include <motor_controller.h>
 
 #define BASE_SPEED 500
+#define FORWARD_TIME_AFTER_TURN 3000 // in ms
+#define TURN_TIME 1000 // in ms
 
 /* General consept
  * ---------------
@@ -91,7 +93,41 @@ void control_forward_motion( void ){
 	speed_right -= Ki * integral_error;
 }
 
+void stop_motors( void ){
+	speed_left = 0;
+	speed_right = 0;
+}
+void turn(turn_direction direction){
+	static systime_t turn_start_time = 0; // measures how long we are already in the turn
+	if (turn_start_time == 0){ // this is the case for the first time this function is called and the first time after a turn was finished (turn_start_time is reset to zero at the end to indicate that a new turn starts the next time the function is called)
+		turn_start_time = chVTGetSystemTime(); // store the time when the thread is initialized
+	}
+	if (chVTGetSystemTime() - turn_start_time < TURN_TIME){
+		switch(direction){
+		case LEFT: speed_left = BASE_SPEED; speed_right = -BASE_SPEED; break;
+		case RIGHT: speed_left = -BASE_SPEED; speed_right = BASE_SPEED; break;
+		}
 
+		}
+
+	// if the turn time is over start driving straight for a certain time (needed to exit the crossroads)
+	else if (chVTGetSystemTime() - turn_start_time < TURN_TIME + FORWARD_TIME_AFTER_TURN) {
+		speed_left = BASE_SPEED;
+		speed_right = BASE_SPEED;
+	}
+
+	else { // the turn is finished
+		// todo: tell the control thread that the thread is finished
+		turn_start_time = 0;
+	}
+}
+
+
+
+/*
+ * Start the thread
+ */
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO, MotorController, NULL);
 }
+
