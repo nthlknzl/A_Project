@@ -56,13 +56,11 @@ static THD_FUNCTION(ProcessImage, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void) arg;
 
-
-
-	// Declares the topic for the message bus.
+	// Declares the topic for the process Image message bus.
 	messagebus_topic_t processImage_topic;
 	MUTEX_DECL(processImage_topic_lock);
 	CONDVAR_DECL(processImage_topic_condvar);
-	//messagebus_topic_init(&processImage_topic, &processImage_topic_lock, &processImage_topic_condvar, &imu_values, sizeof(imu_values));
+	messagebus_topic_init(&processImage_topic, &processImage_topic_lock, &processImage_topic_condvar, &detection, sizeof(detection));
 	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
 
 	uint8_t *img_buff_ptr;

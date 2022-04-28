@@ -12,7 +12,7 @@ static enum motion_state state;
 
 
 //detection state
-enum detection_state {NOTHING_DETECTED, EDGE_DETECTED, LINE_DETECTED, CIRCLE_DETECTED};
+enum detection_state {NOTHING_DETECTED, EDGE_DETECTED, LINE_DETECTED};
 enum detection_state detection;
 
 
@@ -28,30 +28,47 @@ static THD_FUNCTION(ControlRobot, arg) {
 
 	messagebus_topic_t *processImage_topic = messagebus_find_topic_blocking(&bus, "/processImage");
 
+	// Declares the topic for the motor message bus.
+	messagebus_topic_t motor_topic;
+	MUTEX_DECL(motor_topic_lock);
+	CONDVAR_DECL(motor_topic_condvar);
+	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &state, sizeof(state));
+	messagebus_advertise_topic(&bus, &motor_topic, "/motor");
+
 
 	while (1) {
 		time = chVTGetSystemTime();
 
-		//wait for detection state information
-		messagebus_topic_wait(processImage_topic, &detection, sizeof(detection));
-
 		switch (state)
 		{
-		case LINE_DETECTED:
-			state = STOP;
-			// function to choose direction
+		case FORWARD_MOTION:
+			//get detection state information
+			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
 			break;
-		case CIRCLE_DETECTED:
-			// do sth;
+		case STOP:
+			//function to choose turn direction
+			state = LEFT_TURN;
+			break;
+		case LEFT_TURN:
+			//get detection state information
+			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
+			break;
+		case RIGHT_TURN:
+			//get detection state information
+			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
 			break;
 		default:
 			break;
 		}
 
-		// transmettre state info au moteur
+		if (detection == LINE_DETECTED)
+		{
+			state = STOP;
+			//get time and speed value
+			//transmit values to computer
+		}
 
-
-		//T=10ms -> f=100Hz
-		chThdSleepUntilWindowed(time, time + MS2ST(10));
+		//transmettre state info au moteur
+		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
 	}
 }
