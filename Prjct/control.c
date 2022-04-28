@@ -7,7 +7,6 @@
 #include <control.h>
 
 //motor states
-enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN};
 static enum motion_state state;
 
 
@@ -33,7 +32,7 @@ static THD_FUNCTION(ControlRobot, arg) {
 	MUTEX_DECL(motor_topic_lock);
 	CONDVAR_DECL(motor_topic_condvar);
 	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &state, sizeof(state));
-	messagebus_advertise_topic(&bus, &motor_topic, "/motor");
+	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
 
 
 	while (1) {
