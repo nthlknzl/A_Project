@@ -23,7 +23,8 @@
  *
  * */
 
-enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN};
+// ----------------------------------------------------------------------------------------------------------------------
+enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
 
 static int16_t speed_left = 0;
 static int16_t speed_right = 0;
@@ -44,7 +45,7 @@ static THD_FUNCTION(MotorController, arg) {
     systime_t time;
     // read the current state in the bus.
     enum motion_state state; // variable to store the state - read from the message bus
-    messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/state");
+    messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
     messagebus_topic_read(state_topic, &state, sizeof(state)); // we use topic-read and not topicWait in order to allow the motor_controller to run more frequent than the system control thread. This is useful for the PID controller in this thread.
 
     speed_left = 0;
@@ -117,5 +118,21 @@ void turn(turn_direction direction){
  */
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO, MotorController, NULL);
+}
+
+
+void motor_controller_test( void ){
+	/*
+	 * This test sets the motor_control threat to high priority (+20) to ensure its isolation from the other
+	 * threads before cycling through the states:
+	 * 1. forward
+	 * 2. stop
+	 * 3. left turn
+	 * 4. right turn
+	 *
+	 */
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO + 20, MotorController, NULL);
+
+
 }
 
