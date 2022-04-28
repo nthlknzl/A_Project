@@ -3,6 +3,7 @@
 #include <math.h>
 #include <usbcfg.h>
 #include <chprintf.h>
+#include "msgbus/messagebus.h"
 
 #include <motors.h>
 #include <position_awareness.h>
@@ -23,10 +24,11 @@
  * */
 
 enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN};
-enum motion_state state;
 
 static int16_t speed_left = 0;
 static int16_t speed_right = 0;
+
+extern messagebus_t bus;
 
 // constants for the controller
 #define Kp 0.1
@@ -40,6 +42,10 @@ static THD_FUNCTION(MotorController, arg) {
     (void)arg;
 
     systime_t time;
+    // read the current state in the bus.
+    enum motion_state state; // variable to store the state - read from the message bus
+    messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/state");
+    messagebus_topic_read(state_topic, &state, sizeof(state)); // we use topic-read and not topicWait in order to allow the motor_controller to run more frequent than the system control thread. This is useful for the PID controller in this thread.
 
     speed_left = 0;
     speed_right = 0;
@@ -98,27 +104,9 @@ void stop_motors( void ){
 	speed_right = 0;
 }
 void turn(turn_direction direction){
-	static systime_t turn_start_time = 0; // measures how long we are already in the turn
-	if (turn_start_time == 0){ // this is the case for the first time this function is called and the first time after a turn was finished (turn_start_time is reset to zero at the end to indicate that a new turn starts the next time the function is called)
-		turn_start_time = chVTGetSystemTime(); // store the time when the thread is initialized
-	}
-	if (chVTGetSystemTime() - turn_start_time < TURN_TIME){
-		switch(direction){
+	switch(direction){
 		case LEFT: speed_left = BASE_SPEED; speed_right = -BASE_SPEED; break;
 		case RIGHT: speed_left = -BASE_SPEED; speed_right = BASE_SPEED; break;
-		}
-
-		}
-
-	// if the turn time is over start driving straight for a certain time (needed to exit the crossroads)
-	else if (chVTGetSystemTime() - turn_start_time < TURN_TIME + FORWARD_TIME_AFTER_TURN) {
-		speed_left = BASE_SPEED;
-		speed_right = BASE_SPEED;
-	}
-
-	else { // the turn is finished
-		// todo: tell the control thread that the thread is finished
-		turn_start_time = 0;
 	}
 }
 
