@@ -75,8 +75,8 @@ void control_forward_motion( void ){
 	// I
 	static int16_t integral_error = 0;
 	integral_error += lr_error;
-	if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
-	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;}
+	/*if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
+	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;} */ // deleted bc of overflow and prob. not needed
 	speed_left += Ki * integral_error;
 	speed_right -= Ki * integral_error;
 }

@@ -64,8 +64,7 @@ int main(void)
 	//pi_regulator_start();
 	//process_image_start();
 
-	proximity_start();
-	calibrate_ir();
+	init_proximity_sensors();
 
 	motor_controller_test();
 	//motor_controller_start();
