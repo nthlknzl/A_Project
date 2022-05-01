@@ -62,12 +62,13 @@ int main(void)
 
 	//starts the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	process_image_start();
+	//process_image_start();
 
 	proximity_start();
 	calibrate_ir();
 
-	motor_controller_start();
+	motor_controller_test();
+	//motor_controller_start();
 
 
     /* Infinite loop. */
