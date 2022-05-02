@@ -23,6 +23,8 @@ extern "C" {
 #define IMAGE_BUFFER_SIZE		480// 480 pixels in one column
 #define IMAGE_BUFFER_SIZE_SEND	640// 480 pixels in one column
 #define IMAGE_COLUMN_SIZE		2 // 2 pixels per column
+#define COL_START				320
+#define LIN_START				0
 
 //constants for process_image.c: average calculation
 #define AVE_NB 	10

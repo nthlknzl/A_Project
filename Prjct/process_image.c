@@ -16,6 +16,8 @@ extern messagebus_t bus;
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
+
+static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col);
 static void color_extraction_red(uint8_t *image, uint8_t *img_buff_ptr);
 static void floating_average(uint8_t *buffer, uint8_t nb_val_for_ave);
 static uint8_t line_detection(uint8_t *img_values, uint8_t state);
@@ -33,7 +35,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 	(void) arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the column 320 + 321 (minimum 2 columns because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 320, 0, IMAGE_COLUMN_SIZE,
+	po8030_advanced_config(FORMAT_RGB565, COL_START, LIN_START, IMAGE_COLUMN_SIZE,
 			IMAGE_BUFFER_SIZE, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
@@ -63,6 +65,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
 
 	uint8_t *img_buff_ptr;
+	uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
 
 	while (1) {
@@ -71,10 +74,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		//Extracts only the red pixels
-		color_extraction_red(image, img_buff_ptr);
+		//Extract one column
+		column_extraction(image_all_colors, img_buff_ptr, 400);
 
-		//floating average over AVE_NB values
+		//Extracts only the red pixels
+		color_extraction_red(image, image_all_colors);
+
+		//Floating average over AVE_NB values
 		floating_average(image, AVE_NB);
 
 		if (detection == LINE_DETECTED) {
@@ -107,11 +113,19 @@ static THD_FUNCTION(ProcessImage, arg) {
 	}
 }
 
-static void color_extraction_red(uint8_t *image, uint8_t *img_buff_ptr){
+static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col){
+	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE); i += 2) {
+		//2 bytes per pixel
+		image_all_colors[2*i] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i)*2];
+		image_all_colors[2*i+1] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i+1)*2];
+	}
+}
+
+static void color_extraction_red(uint8_t *image, uint8_t *image_all_colors){
 	for (uint16_t i = 0; i < (2 * IMAGE_BUFFER_SIZE); i += 2) {
 		//extracts first 5bits of the first byte
 		//takes nothing from the second byte
-		image[i / 2] = (uint8_t) img_buff_ptr[i] & 0xF8;
+		image[i / 2] = (uint8_t) image_all_colors[i] & 0xF8;
 	}
 }
 //-------------------------------------------- here we could add color extraction functions for blue / green
