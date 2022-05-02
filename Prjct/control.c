@@ -9,16 +9,14 @@
 //motor states
 static enum motion_state state;
 
-
 //detection state
-enum detection_state {NOTHING_DETECTED, EDGE_DETECTED, LINE_DETECTED};
-enum detection_state detection;
-
+static enum detection_state detection;
 
 extern messagebus_t bus;
 
-static THD_WORKING_AREA(waControlRobot, 256);
-static THD_FUNCTION(ControlRobot, arg) {
+
+static THD_WORKING_AREA(waReactOnDetection, 256);
+static THD_FUNCTION(ReactOnDetection, arg) {
 
 	chRegSetThreadName(__FUNCTION__);
 	(void) arg;
@@ -28,46 +26,31 @@ static THD_FUNCTION(ControlRobot, arg) {
 	messagebus_topic_t *processImage_topic = messagebus_find_topic_blocking(&bus, "/processImage");
 
 	// Declares the topic for the motor message bus.
-	messagebus_topic_t motor_topic;
-	MUTEX_DECL(motor_topic_lock);
-	CONDVAR_DECL(motor_topic_condvar);
-	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &state, sizeof(state));
-	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
-
+	messagebus_topic_t motor_state_topic;
+	MUTEX_DECL(motor_state_topic_lock);
+	CONDVAR_DECL(motor_state_topic_condvar);
+	messagebus_topic_init(&motor_state_topic, &motor_state_topic_lock, &motor_state_topic_condvar, &state, sizeof(state));
+	messagebus_advertise_topic(&bus, &motor_state_topic, "/motor_state");
 
 	while (1) {
 		time = chVTGetSystemTime();
 
-		switch (state)
-		{
-		case FORWARD_MOTION:
-			//get detection state information
-			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
-			break;
-		case STOP:
-			//function to choose turn direction
-			state = LEFT_TURN;
-			break;
-		case LEFT_TURN:
-			//get detection state information
-			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
-			break;
-		case RIGHT_TURN:
-			//get detection state information
-			messagebus_topic_read(processImage_topic, &detection, sizeof(detection));
-			break;
-		default:
-			break;
-		}
-
+		messagebus_topic_wait(processImage_topic, &detection, sizeof(detection));
 		if (detection == LINE_DETECTED)
 		{
-			state = STOP;
 			//get time and speed value
-			//transmit values to computer
+			//calculate distance
+			//transmit to computer
+			state = STOP;
 		}
 
+		if (detection == RED_DETECTED)
+		{
+			state = STOP;
+		}
+
+
 		//transmettre state info au moteur
-		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
+		messagebus_topic_publish(&motor_state_topic, &state, sizeof(state));
 	}
 }

@@ -4,13 +4,12 @@
 #include <usbcfg.h>
 
 #include <main.h>
-//#include <messagebus.h>
 #include <camera/po8030.h>
 #include <process_image.h>
+#include <control.h>
 
 //detection state
-enum detection_state {NOTHING_DETECTED, EDGE_DETECTED, LINE_DETECTED, CIRCLE_DETECTED};
-enum detection_state detection;
+static enum detection_state detection;
 
 extern messagebus_t bus;
 
@@ -80,16 +79,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 		detection = line_detection(image, detection);
+		/* Publishes it on the bus. */
+		messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+
 		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
-
-	     	/* Publishes it on the bus. */
-			messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
-
 			detection = NOTHING_DETECTED;
 		}
+
 #ifdef DEBUG_LINE_DETECTION
 		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection);
 #endif
