@@ -5,8 +5,13 @@
 
 #include <main.h>
 #include <camera/po8030.h>
-
 #include <process_image.h>
+#include <control.h>
+
+//detection state
+static enum detection_state detection;
+
+extern messagebus_t bus;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -50,6 +55,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void) arg;
 
+	// Declares the topic for the process Image message bus.
+	messagebus_topic_t processImage_topic;
+	MUTEX_DECL(processImage_topic_lock);
+	CONDVAR_DECL(processImage_topic_condvar);
+	messagebus_topic_init(&processImage_topic, &processImage_topic_lock, &processImage_topic_condvar, &detection, sizeof(detection));
+	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
+
 	uint8_t *img_buff_ptr;
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
 
@@ -65,21 +77,20 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//floating average over AVE_NB values
 		floating_average(image, AVE_NB);
 
-		//line detection
-		static uint8_t detection_state = NOTHING_DETECTED;
 
-		detection_state = line_detection(image, detection_state);
-		if (detection_state == LINE_DETECTED) {
+		detection = line_detection(image, detection);
+		/* Publishes it on the bus. */
+		messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+
+		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
-			//------------------------------------------------------------------------------------
-			//stop the motor
-			//------------------------------------------------------------------------------------
-			detection_state = NOTHING_DETECTED;
+			detection = NOTHING_DETECTED;
 		}
+
 #ifdef DEBUG_LINE_DETECTION
-		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection_state);
+		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection);
 #endif
 
 #ifdef DEBUG_IMAGE 	//sending image to computer for verification
@@ -123,12 +134,12 @@ static uint8_t line_detection(uint8_t *img_values, uint8_t state) {
 		//falling edge
 		if (img_values[i] > img_values[i + ED_STEP]) {
 			if (falling_edge_detected(img_values, img_edge, i)) {
-				state = FALLING_EDGE_DETECTED;
+				state = EDGE_DETECTED;
 			}
 
 			//rising edge
 		} else {
-			if (rising_edge_detected(img_values, img_edge, i) && state == 1) {
+			if (rising_edge_detected(img_values, img_edge, i) && state == EDGE_DETECTED) {
 				state = LINE_DETECTED;
 			}
 		}
@@ -155,7 +166,7 @@ static bool falling_edge_detected(uint8_t *img_values, uint8_t *img_edge,
 	//edge detected
 	else {
 		img_edge[i] = 0;
-		return FALLING_EDGE_DETECTED;
+		return EDGE_DETECTED;
 	}
 	return NOTHING_DETECTED;
 }
@@ -174,7 +185,7 @@ static bool rising_edge_detected(uint8_t *img_values, uint8_t *img_edge,
 	//edge detected
 	else {
 		img_edge[i] = 20;
-		return RISING_EDGE_DETECTED;
+		return EDGE_DETECTED;
 	}
 	return NOTHING_DETECTED;
 }
