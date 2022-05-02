@@ -77,17 +77,24 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//floating average over AVE_NB values
 		floating_average(image, AVE_NB);
 
-
-		detection = line_detection(image, detection);
-		/* Publishes it on the bus. */
-		messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
-
 		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
-			detection = NOTHING_DETECTED;
+		/*
+			if(function to detect red circle) {
+				detection = RED_DETECTED;
+				// Publishes it on the bus.
+				messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+				detection = LINE_DETECTED;
+			}
+			else{ detection = NOTHING_DETECTED; }
+		*/
 		}
+		detection = line_detection(image, detection);
+		/* Publishes it on the bus. */
+		messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+
 
 #ifdef DEBUG_LINE_DETECTION
 		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection);
@@ -125,7 +132,7 @@ static void floating_average(uint8_t *buffer, uint8_t nb_val_for_ave) {
 /*detects a colored line on white background
  *
  *	detection of white parts give high RGB values, colored parts low values.
- *	so we detect a rapid decrease in the values followed by a rapid increase => line
+ *	so we detect a rapid decrease in the values followed by a rapid increase
  */
 static uint8_t line_detection(uint8_t *img_values, uint8_t state) {
 	static uint8_t img_edge[IMAGE_BUFFER_SIZE] = { 0 };

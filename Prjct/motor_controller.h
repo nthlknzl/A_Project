@@ -1,10 +1,9 @@
 #ifndef MOTOR_CONTROLLER_H
 #define MOTOR_CONTROLLER_H
 
-typedef enum {LEFT, RIGHT} turn_direction;
+#include <control.h>
 
-enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
-
+typedef enum {LEFT, RIGHT} turn_direction; // bruchts die variable??
 
 void motor_controller_start(void);
 void motor_controller_test( void );
