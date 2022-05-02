@@ -14,6 +14,7 @@ CSRC += ./main.c \
 		./process_image.c \
 		./position_awareness.c \
 		./motor_controller.c \
+		./navigation.c \
 	
 #Header folders to include
 INCDIR += 

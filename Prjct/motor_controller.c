@@ -8,6 +8,7 @@
 #include <motors.h>
 #include <position_awareness.h>
 #include <motor_controller.h>
+#include <navigation.h>
 
 #define BASE_SPEED 500
 #define FORWARD_TIME_AFTER_TURN 3000 // in ms
@@ -167,7 +168,7 @@ void motor_controller_test( void ){
 	/*
 	 * Test 1: cycle through all the states
 	 */
-
+	/*
 	while(1){
 		//enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
 		for(enum motion_state state = FORWARD_MOTION; state<=RIGHT_TURN; state++){
@@ -175,7 +176,7 @@ void motor_controller_test( void ){
 			chThdSleepMicroseconds(2000000);
 		}
 	}
-
+*/
 
 	/*
 	 * Test 2: Forward only
@@ -206,6 +207,15 @@ void motor_controller_test( void ){
 
 	}
 	*/
+
+	/*
+	 * Test 4: use the navigation thread
+	 */
+
+	navigation_thread_start();
+	while(1){
+		chThdSleepMicroseconds(1000000);
+	}
 
 }
 

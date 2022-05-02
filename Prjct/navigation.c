@@ -5,13 +5,15 @@
 #include <chprintf.h>
 #include "msgbus/messagebus.h"
 
+#include <navigation.h>
 #include <motors.h>
 #include <position_awareness.h>
 #include <motor_controller.h>
 
-#define BASE_SPEED 500
-#define FORWARD_TIME_AFTER_TURN 3000 // in ms
-#define TURN_TIME 1000 // in ms
+#include <position_awareness.h>
+
+#define FORWARD_TIME_AFTER_TURN 1000000 // in us
+#define TURN_TIME 700000 // in us
 
 /* General concept
  * ---------------
@@ -24,32 +26,26 @@
  *
  * */
 
-
-static int16_t speed_left = 0;
-static int16_t speed_right = 0;
-
 extern messagebus_t bus;
-
-// constants for the controller
-#define Kp 0.1
-#define  Ki 0.0001
-
-
 
 static THD_WORKING_AREA(waNavigation, 256);
 static THD_FUNCTION(Navigation, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    systime_t time;
-
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
     surrounding_walls_info surrounding;
 
+
     while(1){
-        time = chVTGetSystemTime();
         messagebus_topic_wait(surrounding_topic, &surrounding, sizeof(surrounding)); // we use topic-read and not topicWait in order to allow the motor_controller to run more frequent than the system control thread. This is useful for the PID controller in this thread.
 
+        switch(surrounding){
+        case BOTH_WALLS: break;
+        case NO_WALLS: break;
+        case ONLY_LEFT_WALL: command_turn(LEFT_TURN); break;
+        case ONLY_RIGHT_WALL: command_turn(RIGHT_TURN); break;
+        }
         chprintf((BaseSequentialStream *)&SD3, "navigation status: %d \r\n", surrounding);
     }
 }
@@ -58,6 +54,17 @@ static THD_FUNCTION(Navigation, arg) {
  * Start the thread
  */
 void navigation_thread_start(void){
-	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO, Navigation, NULL);
+	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+1, Navigation, NULL);
+}
+
+void command_turn(enum motion_state direction){
+	// pointer to the bus topic to write to the motors
+	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
+	enum motion_state motor_state = direction; // store the info command to be published to the bus
+	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	chThdSleepMicroseconds(TURN_TIME); // wait a certain time for the robot to turn
+	motor_state = FORWARD_MOTION; // go forward after the turn
+	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
 }
 
