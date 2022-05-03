@@ -53,7 +53,7 @@ static THD_FUNCTION(NavigationThd, arg) {
  * Start the thread
  */
 void navigation_thread_start(void){
-	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+1, NavigationThd, NULL);
+	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+4, NavigationThd, NULL);
 }
 
 void command_turn(enum motion_state direction){

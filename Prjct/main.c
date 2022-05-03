@@ -66,8 +66,26 @@ int main(void)
 
 	init_proximity_sensors();
 
-	motor_controller_test();
-	//motor_controller_start();
+	// init messagebus
+	// init the messagebus
+		enum motion_state initital_state = FORWARD_MOTION;
+		messagebus_topic_t motor_topic;
+		MUTEX_DECL(motor_topic_lock);
+		CONDVAR_DECL(motor_topic_condvar);
+		messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
+		messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
+
+		// create a messagebus topic to publish information about the surrounding
+		surrounding_walls_info surrounding = NO_WALLS;
+		messagebus_topic_t surrounding_topic;
+		MUTEX_DECL(surrounding_topic_lock);
+		CONDVAR_DECL(surrounding_topic_condvar);
+		messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
+		messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
+
+	//motor_controller_test();
+	motor_controller_start();
+	navigation_thread_start();
 
 
     /* Infinite loop. */
@@ -75,11 +93,13 @@ int main(void)
     	//waits 1 second
         chThdSleepMilliseconds(1000);
 
+        /*
         // test code to test teh pos awareness
         int diff = get_left_right_error();
         chThdSleepMilliseconds(500);
         chprintf((BaseSequentialStream *)&SD3, "left-right difference: %d \r\n", diff);
         // end test pos awareness
+         */
     }
 }
 

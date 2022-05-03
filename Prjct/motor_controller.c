@@ -127,6 +127,7 @@ void update_speed( enum motion_state state){
     	case STOP: stop_motors(); break;
     	case LEFT_TURN: turn(LEFT); break;
     	case RIGHT_TURN: turn(RIGHT); break;
+    	default: control_forward_motion(); // in case there's an undefined state somewhere.
         }
 }
 
@@ -136,7 +137,7 @@ void update_speed( enum motion_state state){
  * Start the thread
  */
 void motor_controller_start(void){
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO, MotorController, NULL);
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+2, MotorController, NULL);
 }
 
 /*
