@@ -17,7 +17,7 @@
 #define IR_SENSOR_LEFT_45FRONT 6u
 #define IR_SENSOR_LEFT_45BACK 4u
 
-#define IR_SENSOR_THRESHOLD  25 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD  100 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 
 // static variables
 extern messagebus_t bus;
@@ -32,6 +32,8 @@ int16_t get_left_right_error( void ){
 	static int16_t right_side_distance_ref = 100;
 
 	int16_t error = 0;
+
+	chprintf((BaseSequentialStream *)&SD3, "sensors; %d   %d \r\n", get_prox(IR_SENSOR_LEFT_CENTER), get_prox(IR_SENSOR_RIGHT_CENTER));
 
 	if((get_prox(IR_SENSOR_LEFT_CENTER) > IR_SENSOR_THRESHOLD) && (get_prox(IR_SENSOR_RIGHT_CENTER) > IR_SENSOR_THRESHOLD)){
 		// there are walls on both sides  -> error = left-right

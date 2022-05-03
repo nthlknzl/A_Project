@@ -38,8 +38,7 @@ static THD_FUNCTION(NavigationThd, arg) {
 
 
     while(1){
-        messagebus_topic_wait(surrounding_topic, &surrounding, sizeof(surrounding)); // we use topic-read and not topicWait in order to allow the motor_controller to run more frequent than the system control thread. This is useful for the PID controller in this thread.
-
+        messagebus_topic_wait(surrounding_topic, &surrounding, sizeof(surrounding));
         switch(surrounding){
         case BOTH_WALLS: break;
         case NO_WALLS: break;
