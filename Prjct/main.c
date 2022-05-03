@@ -46,7 +46,7 @@ int main(void)
 {
     halInit();
     chSysInit();
-    mpu_init();
+    //mpu_init();
 
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
@@ -55,8 +55,8 @@ int main(void)
     //starts the USB communication
     usb_start();
     //starts the camera
-    dcmi_start();
-    po8030_start();
+    //dcmi_start();
+    //po8030_start();
     //inits the motors
     motors_init();
 

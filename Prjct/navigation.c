@@ -29,7 +29,7 @@
 extern messagebus_t bus;
 
 static THD_WORKING_AREA(waNavigation, 256);
-static THD_FUNCTION(Navigation, arg) {
+static THD_FUNCTION(NavigationThd, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
@@ -46,7 +46,7 @@ static THD_FUNCTION(Navigation, arg) {
         case ONLY_LEFT_WALL: command_turn(LEFT_TURN); break;
         case ONLY_RIGHT_WALL: command_turn(RIGHT_TURN); break;
         }
-        chprintf((BaseSequentialStream *)&SD3, "navigation status: %d \r\n", surrounding);
+        chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", surrounding);
     }
 }
 
@@ -54,7 +54,7 @@ static THD_FUNCTION(Navigation, arg) {
  * Start the thread
  */
 void navigation_thread_start(void){
-	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+1, Navigation, NULL);
+	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+1, NavigationThd, NULL);
 }
 
 void command_turn(enum motion_state direction){

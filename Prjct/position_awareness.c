@@ -10,16 +10,18 @@
 #include <position_awareness.h>
 #include <main.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define IR_SENSOR_LEFT_CENTER 5u
 #define IR_SENSOR_RIGHT_CENTER 2u
 #define IR_SENSOR_LEFT_45FRONT 6u
 #define IR_SENSOR_LEFT_45BACK 4u
 
-#define IR_SENSOR_THRESHOLD  15 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD  25 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 
 // static variables
+extern messagebus_t bus;
+
 
 int16_t get_left_right_error( void ){
 	// store the found walls
@@ -58,8 +60,10 @@ int16_t get_left_right_error( void ){
 		surrounding = NO_WALLS;
 	}
 
+
 	// write the wall information to the bus
-    messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
+    messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
+    //messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/motor_state");
 	messagebus_topic_publish(surrounding_topic, &surrounding, sizeof(surrounding));
 
 
@@ -67,6 +71,7 @@ int16_t get_left_right_error( void ){
 	if (error > 500){error = 500;}
 	else if (error < -500){error = -500;}
 	return error;
+
 }
 
 float get_left_crossroad_center_error( void ){
@@ -83,16 +88,6 @@ void init_proximity_sensors( void ){
 	// start and calibrate the sensor
 	proximity_start();
 	calibrate_ir();
-
-	// create a messagebus topic to publish information about the surrounding
-
-	surrounding_walls_info surrounding = NO_WALLS;
-
-	messagebus_topic_t surrounding_topic;
-	MUTEX_DECL(surrounding_topic_lock);
-	CONDVAR_DECL(surrounding_topic_condvar);
-	messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
-	messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
 }
 
 

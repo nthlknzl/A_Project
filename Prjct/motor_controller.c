@@ -54,7 +54,7 @@ static THD_FUNCTION(MotorController, arg) {
         update_speed(state);
         update_motors();
 
-        chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
+        //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
 
         //20Hz
         chThdSleepUntilWindowed(time, time + MS2ST(50));
@@ -161,9 +161,18 @@ void motor_controller_test( void ){
 	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
 	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
 
+	// create a messagebus topic to publish information about the surrounding
+	surrounding_walls_info surrounding = NO_WALLS;
+	messagebus_topic_t surrounding_topic;
+	MUTEX_DECL(surrounding_topic_lock);
+	CONDVAR_DECL(surrounding_topic_condvar);
+	messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
+	messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
+
 
 	// start the thread with high priority
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO + 20, MotorController, NULL);
+	navigation_thread_start();
 
 	/*
 	 * Test 1: cycle through all the states
@@ -212,7 +221,13 @@ void motor_controller_test( void ){
 	 * Test 4: use the navigation thread
 	 */
 
-	navigation_thread_start();
+
+	//navigation_thread_start();
+
+	enum motion_state state = FORWARD_MOTION;
+	messagebus_topic_publish(&motor_topic, &state, sizeof(state));
+	chThdSleepMicroseconds(1000000);
+
 	while(1){
 		chThdSleepMicroseconds(1000000);
 	}
