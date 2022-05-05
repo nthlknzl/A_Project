@@ -85,6 +85,7 @@ int main(void)
 		messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
 
 	//motor_controller_test();
+	situational_awareness_thread_start();
 	motor_controller_start();
 	navigation_thread_start();
 

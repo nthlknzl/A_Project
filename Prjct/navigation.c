@@ -15,6 +15,7 @@
 #define FORWARD_TIME_BEFORE_TURN 500000
 #define FORWARD_TIME_AFTER_TURN 1000000 // in us
 #define TURN_TIME 600000 // in us
+#define SLEEP_TIME_AFTER_COMMAND 500000
 
 /* General concept
  * ---------------
@@ -90,10 +91,12 @@ void command_turn(enum motion_state direction){
 
 void command_motor( enum motion_state command ){
 	// pointer to the bus topic to write to the motors
-	/*
+
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
 	messagebus_topic_publish(state_topic, &command, sizeof(command));
-	*/
+
+	//chThdSleepMicroseconds(SLEEP_TIME_AFTER_COMMAND);
+
 }
 
 
