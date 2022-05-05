@@ -14,7 +14,7 @@
 
 #define FORWARD_TIME_BEFORE_TURN 500000
 #define FORWARD_TIME_AFTER_TURN 1000000 // in us
-#define TURN_TIME 700000 // in us
+#define TURN_TIME 600000 // in us
 
 /* General concept
  * ---------------
@@ -35,18 +35,21 @@ static THD_FUNCTION(NavigationThd, arg) {
     (void)arg;
 
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
-    surrounding_walls_info surrounding;
+	surrounding_walls wall_info = 0u;
 
 
     while(1){
-        messagebus_topic_wait(surrounding_topic, &surrounding, sizeof(surrounding));
-        switch(surrounding){
-        case BOTH_WALLS: break;
-        case NO_WALLS: break;
-        case ONLY_LEFT_WALL: command_turn(LEFT_TURN); break;
-        case ONLY_RIGHT_WALL: command_turn(RIGHT_TURN); break;
-        }
-        chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", surrounding);
+        messagebus_topic_wait(surrounding_topic, &wall_info, sizeof(wall_info));
+
+    	 if ( (wall_info & WALL_LEFT_BIT) == 0u ){
+    		 command_turn(RIGHT_TURN);
+    	}
+    	// only right?
+    	else if ( (wall_info & WALL_RIGHT_BIT) == 0u ){
+    		 command_turn(LEFT_TURN);
+    	}
+
+        chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
 }
 
