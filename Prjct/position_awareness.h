@@ -9,6 +9,8 @@
 #include "hal.h"
 #include <chprintf.h>
 
+typedef enum {BOTH_WALLS, NO_WALLS, ONLY_LEFT_WALL, ONLY_RIGHT_WALL} surrounding_walls_info;
+
 
 
 /* return the difference between the left and the right (l-r) IR sensor. */
@@ -20,5 +22,7 @@ float get_left_crossroad_center_error( void );
 bool get_left_wall_presence( void );
 //Returns True iff the proximity sensors detect an edge on the right side.
 bool get_right_wall_presence( void );
+
+void init_proximity_sensors( void );
 
 #endif

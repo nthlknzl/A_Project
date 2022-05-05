@@ -8,6 +8,7 @@
 #include <motors.h>
 #include <position_awareness.h>
 #include <motor_controller.h>
+#include <navigation.h>
 
 #define BASE_SPEED 500
 #define FORWARD_TIME_AFTER_TURN 3000 // in ms
@@ -53,7 +54,7 @@ static THD_FUNCTION(MotorController, arg) {
         update_speed(state);
         update_motors();
 
-        chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
+        //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
 
         //20Hz
         chThdSleepUntilWindowed(time, time + MS2ST(50));
@@ -75,8 +76,8 @@ void control_forward_motion( void ){
 	// I
 	static int16_t integral_error = 0;
 	integral_error += lr_error;
-	if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
-	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;}
+	/*if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
+	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;} */ // deleted bc of overflow and prob. not needed
 	speed_left += Ki * integral_error;
 	speed_right -= Ki * integral_error;
 }
@@ -126,6 +127,7 @@ void update_speed( enum motion_state state){
     	case STOP: stop_motors(); break;
     	case LEFT_TURN: turn(LEFT); break;
     	case RIGHT_TURN: turn(RIGHT); break;
+    	default: control_forward_motion(); // in case there's an undefined state somewhere.
         }
 }
 
@@ -135,7 +137,7 @@ void update_speed( enum motion_state state){
  * Start the thread
  */
 void motor_controller_start(void){
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO, MotorController, NULL);
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+2, MotorController, NULL);
 }
 
 /*
@@ -160,14 +162,23 @@ void motor_controller_test( void ){
 	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
 	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
 
+	// create a messagebus topic to publish information about the surrounding
+	surrounding_walls_info surrounding = NO_WALLS;
+	messagebus_topic_t surrounding_topic;
+	MUTEX_DECL(surrounding_topic_lock);
+	CONDVAR_DECL(surrounding_topic_condvar);
+	messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
+	messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
+
 
 	// start the thread with high priority
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO + 20, MotorController, NULL);
+	navigation_thread_start();
 
 	/*
 	 * Test 1: cycle through all the states
 	 */
-
+	/*
 	while(1){
 		//enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
 		for(enum motion_state state = FORWARD_MOTION; state<=RIGHT_TURN; state++){
@@ -175,7 +186,7 @@ void motor_controller_test( void ){
 			chThdSleepMicroseconds(2000000);
 		}
 	}
-
+*/
 
 	/*
 	 * Test 2: Forward only
@@ -206,6 +217,21 @@ void motor_controller_test( void ){
 
 	}
 	*/
+
+	/*
+	 * Test 4: use the navigation thread
+	 */
+
+
+	//navigation_thread_start();
+
+	enum motion_state state = FORWARD_MOTION;
+	messagebus_topic_publish(&motor_topic, &state, sizeof(state));
+	chThdSleepMicroseconds(1000000);
+
+	while(1){
+		chThdSleepMicroseconds(1000000);
+	}
 
 }
 
