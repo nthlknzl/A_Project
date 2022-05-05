@@ -12,6 +12,7 @@
 
 #include <position_awareness.h>
 
+#define FORWARD_TIME_BEFORE_TURN 500000
 #define FORWARD_TIME_AFTER_TURN 1000000 // in us
 #define TURN_TIME 700000 // in us
 
@@ -59,9 +60,18 @@ void navigation_thread_start(void){
 void command_turn(enum motion_state direction){
 	// pointer to the bus topic to write to the motors
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
-	enum motion_state motor_state = direction; // store the info command to be published to the bus
+
+	// go forward
+	enum motion_state motor_state = FORWARD_MOTION; // store the info command to be published to the bus
+	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	chThdSleepMicroseconds(FORWARD_TIME_BEFORE_TURN); // wait a certain time for the robot to turn
+
+	// do the turn
+	motor_state = direction; // store the info command to be published to the bus
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
 	chThdSleepMicroseconds(TURN_TIME); // wait a certain time for the robot to turn
+
+	// go forward
 	motor_state = FORWARD_MOTION; // go forward after the turn
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
 	chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
