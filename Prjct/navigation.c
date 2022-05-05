@@ -90,8 +90,10 @@ void command_turn(enum motion_state direction){
 
 void command_motor( enum motion_state command ){
 	// pointer to the bus topic to write to the motors
+	/*
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
 	messagebus_topic_publish(state_topic, &command, sizeof(command));
+	*/
 }
 
 

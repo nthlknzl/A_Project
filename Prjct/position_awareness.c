@@ -9,6 +9,7 @@
 
 #include <position_awareness.h>
 #include <main.h>
+#include <navigation.h>
 
 //#define DEBUG
 

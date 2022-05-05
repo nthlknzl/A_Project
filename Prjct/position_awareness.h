@@ -11,12 +11,6 @@
 
 typedef enum {BOTH_WALLS, NO_WALLS, ONLY_LEFT_WALL, ONLY_RIGHT_WALL} surrounding_walls_info;
 
-typedef uint8_t surrounding_walls;
-
-#define WALL_IN_FRONT_BIT 0b00000001
-#define WALL_LEFT_BIT 0b00000010
-#define WALL_RIGHT_BIT 0b00000100
-
 
 
 
