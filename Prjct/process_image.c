@@ -7,6 +7,7 @@
 #include <camera/po8030.h>
 #include <process_image.h>
 #include <control.h>
+#include <navigation.h>
 
 //detection state
 static enum detection_state detection;
@@ -64,6 +65,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 	messagebus_topic_init(&processImage_topic, &processImage_topic_lock, &processImage_topic_condvar, &detection, sizeof(detection));
 	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
 
+	messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
+
 	uint8_t *img_buff_ptr;
 	static uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
@@ -85,12 +88,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		detection = line_detection(image, detection);
 
+		surrounding surrounding_info = 0u;
+
 		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
+
+			surrounding_info |= LINE_IN_FRONT;
 			/* Publishes it on the bus. */
-			messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 			detection = NOTHING_DETECTED;
 		}
 
