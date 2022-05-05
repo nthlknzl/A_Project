@@ -65,7 +65,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
 
 	uint8_t *img_buff_ptr;
-	uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
+	static uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
 
 	while (1) {
@@ -75,7 +75,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//Extract one column
-		column_extraction(image_all_colors, img_buff_ptr, 400);
+		column_extraction(image_all_colors, img_buff_ptr, 320);
 
 		//Extracts only the red pixels
 		color_extraction_red(image, image_all_colors);
@@ -83,24 +83,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//Floating average over AVE_NB values
 		floating_average(image, AVE_NB);
 
+		detection = line_detection(image, detection);
+
 		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
-		/*
-			if(function to detect red circle) {
-				detection = RED_DETECTED;
-				// Publishes it on the bus.
-				messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
-				detection = LINE_DETECTED;
-			}
-			else{ detection = NOTHING_DETECTED; }
-		*/
+			/* Publishes it on the bus. */
+			messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
+			detection = NOTHING_DETECTED;
 		}
-		detection = line_detection(image, detection);
-		/* Publishes it on the bus. */
-		messagebus_topic_publish(&processImage_topic, &detection, sizeof(detection));
-
 
 #ifdef DEBUG_LINE_DETECTION
 		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection);
