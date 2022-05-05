@@ -22,7 +22,6 @@ typedef uint8_t surrounding_walls;
 
 /* return the difference between the left and the right (l-r) IR sensor. */
 int16_t get_left_right_error( void );
-float get_left_crossroad_center_error( void );
 
 // getter for detected edges
  //Returns True iff the proximity sensors detect an edge on the left side.

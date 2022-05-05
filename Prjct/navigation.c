@@ -35,22 +35,30 @@ static THD_FUNCTION(NavigationThd, arg) {
     (void)arg;
 
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
-	surrounding_walls wall_info = 0u;
+	surrounding wall_info = 0u;
 
 
     while(1){
         messagebus_topic_wait(surrounding_topic, &wall_info, sizeof(wall_info));
 
-    	 if ( (wall_info & WALL_LEFT_BIT) == 0u ){
+        if (wall_info & WALL_IN_FRONT_BIT){
+        	command_motor(STOP);
+        }
+
+        else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
     		 command_turn(RIGHT_TURN);
     	}
     	// only right?
     	else if ( (wall_info & WALL_RIGHT_BIT) == 0u ){
     		 command_turn(LEFT_TURN);
     	}
+    	else {
+    		command_motor(FORWARD_MOTION);
+    	}
 
         chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
+
 }
 
 /*
@@ -79,4 +87,11 @@ void command_turn(enum motion_state direction){
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
 	chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
 }
+
+void command_motor( enum motion_state command ){
+	// pointer to the bus topic to write to the motors
+	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
+	messagebus_topic_publish(state_topic, &command, sizeof(command));
+}
+
 

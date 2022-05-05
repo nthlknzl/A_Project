@@ -14,11 +14,11 @@
 
 #define IR_SENSOR_LEFT_CENTER 5u
 #define IR_SENSOR_RIGHT_CENTER 2u
-#define IR_SENSOR_LEFT_45FRONT 6u
-#define IR_SENSOR_LEFT_45BACK 4u
+#define IR_SENSOR_LEFT_FRONT 7u
+#define IR_SENSOR_RIGHT_FRONT 0u
 
 #define IR_SENSOR_THRESHOLD  30 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
-
+#define IR_SENSOR_FRONT_SUM_THRESHOLD 1000
 // static variables
 extern messagebus_t bus;
 
@@ -34,10 +34,11 @@ int16_t get_left_right_error( void ){
 
 	chprintf((BaseSequentialStream *)&SD3, "sensors; %d   %d \r\n", get_prox(IR_SENSOR_LEFT_CENTER), get_prox(IR_SENSOR_RIGHT_CENTER));
 
-	surrounding_walls wall_info = 0u;
+	surrounding wall_info = 0u;
 
 	if(get_prox(IR_SENSOR_LEFT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_LEFT_BIT ;}
 	if(get_prox(IR_SENSOR_RIGHT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_RIGHT_BIT ;}
+	if((get_prox(IR_SENSOR_LEFT_FRONT) + get_prox(IR_SENSOR_RIGHT_FRONT)) > IR_SENSOR_FRONT_SUM_THRESHOLD){ wall_info |= WALL_IN_FRONT_BIT ;}
 
 	// are there walls on both sides?
 	if( (wall_info & WALL_LEFT_BIT) && (wall_info & WALL_RIGHT_BIT)){
@@ -99,16 +100,6 @@ int16_t get_left_right_error( void ){
 	else if (error < -500){error = -500;}
 	return error;
 
-}
-
-float get_left_crossroad_center_error( void ){
-	int front_left_sensor = get_prox(IR_SENSOR_LEFT_45FRONT);
-	int back_left_sensor = get_prox(IR_SENSOR_LEFT_45BACK);
-	float error = (float)(front_left_sensor - back_left_sensor) / (front_left_sensor + back_left_sensor);
-	#ifdef DEBUG
-		chprintf((BaseSequentialStream *)&SD3, "left crossroad error: %f \r\n", error);
-	#endif
-	return error;
 }
 
 void init_proximity_sensors( void ){

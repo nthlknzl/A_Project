@@ -77,7 +77,7 @@ int main(void)
 		messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
 
 		// create a messagebus topic to publish information about the surrounding walls
-		surrounding_walls wall_info = 0u;
+		surrounding wall_info = 0u;
 		messagebus_topic_t surrounding_topic;
 		MUTEX_DECL(surrounding_topic_lock);
 		CONDVAR_DECL(surrounding_topic_condvar);
