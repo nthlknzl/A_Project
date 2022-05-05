@@ -23,7 +23,7 @@ static THD_FUNCTION(ReactOnDetection, arg) {
 
 	systime_t time;
 
-	messagebus_topic_t *processImage_topic = messagebus_find_topic_blocking(&bus, "/processImage");
+	messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 
 	// Declares the topic for the motor message bus.
 	messagebus_topic_t motor_state_topic;
@@ -35,7 +35,7 @@ static THD_FUNCTION(ReactOnDetection, arg) {
 	while (1) {
 		time = chVTGetSystemTime();
 
-		messagebus_topic_wait(processImage_topic, &detection, sizeof(detection));
+		messagebus_topic_wait(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 		if (detection == LINE_DETECTED)
 		{
 			//get time and speed value
