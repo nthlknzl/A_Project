@@ -44,12 +44,6 @@ static THD_FUNCTION(ReactOnDetection, arg) {
 			state = STOP;
 		}
 
-		if (detection == RED_DETECTED)
-		{
-			state = STOP;
-		}
-
-
 		//transmettre state info au moteur
 		messagebus_topic_publish(&motor_state_topic, &state, sizeof(state));
 	}
