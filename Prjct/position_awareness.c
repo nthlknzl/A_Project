@@ -18,7 +18,7 @@
 #define IR_SENSOR_LEFT_FRONT 7u
 #define IR_SENSOR_RIGHT_FRONT 0u
 
-#define IR_SENSOR_THRESHOLD  30 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD 100 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 1000
 // static variables
 extern messagebus_t bus;
