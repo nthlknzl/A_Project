@@ -10,8 +10,6 @@ extern "C" {
 #include "parameter/parameter.h"
 
 
-
-
 /*
 #define NOTHING_DETECTED 		0
 #define RISING_EDGE_DETECTED 	1
@@ -27,12 +25,12 @@ extern "C" {
 #define LIN_START				0
 
 //constants for process_image.c: average calculation
-#define AVE_NB 	30
+#define AVE_NB 	10
 
 //constants for process_image.c: edge detection
 #define ED_STEP 				100
 #define CHECK_STEP 				150
-#define	EDGE_HEIGHT_MIN 		30
+#define	EDGE_HEIGHT_MIN 		10
 
 
 //other constants for the differents parts of the project -> copied from TP4
@@ -50,7 +48,7 @@ extern "C" {
 
 //for debugging----------------------------------------------------------------------------------------------
 //#define DEBUG
-//#define DEBUG_IMAGE
+#define DEBUG_IMAGE
 //#define DEBUG_IMG_EDGE
 //#define DEBUG_LINE_DETECTION
 
