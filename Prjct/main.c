@@ -56,18 +56,17 @@ int main(void)
     //starts the USB communication
     usb_start();
     //starts the camera
-    //dcmi_start();
-    //po8030_start();
+    dcmi_start();
+    po8030_start();
     //inits the motors
     motors_init();
 
 	//starts the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	//process_image_start();
+	process_image_start();
 
 	init_proximity_sensors();
 
-	// init messagebus
 	// init the messagebus
 		enum motion_state initital_state = FORWARD_MOTION;
 		messagebus_topic_t motor_topic;

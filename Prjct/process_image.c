@@ -58,12 +58,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void) arg;
 
-	// Declares the topic for the process Image message bus.
-	messagebus_topic_t processImage_topic;
-	MUTEX_DECL(processImage_topic_lock);
-	CONDVAR_DECL(processImage_topic_condvar);
-	messagebus_topic_init(&processImage_topic, &processImage_topic_lock, &processImage_topic_condvar, &detection, sizeof(detection));
-	messagebus_advertise_topic(&bus, &processImage_topic, "/processImage");
+    systime_t time;
 
 	messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 
@@ -71,14 +66,19 @@ static THD_FUNCTION(ProcessImage, arg) {
 	static uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
 
+	surrounding surrounding_info = 0u;
+	surrounding surrounding_info_published = 0u;
+
 	while (1) {
+		 time = chVTGetSystemTime();
+
 		//waits until an image has been captured
 		chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//Extract one column
-		column_extraction(image_all_colors, img_buff_ptr, 320);
+		column_extraction(image_all_colors, img_buff_ptr, COL_START);
 
 		//Extracts only the red pixels
 		color_extraction_red(image, image_all_colors);
@@ -88,27 +88,42 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		detection = line_detection(image, detection);
 
-		surrounding surrounding_info = 0u;
-
 		if (detection == LINE_DETECTED) {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
 #endif
 
+			// read the surrounding information from the bus
+			messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
+			messagebus_topic_read(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
+
 			surrounding_info |= LINE_IN_FRONT;
+
 			/* Publishes it on the bus. */
 			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 			detection = NOTHING_DETECTED;
+
+			// reset wall information to 0 without changing line information
+			surrounding_info &= 0b01111111;
+
+	        chThdSleepSeconds(1);
+
+			/* Publishes it on the bus. */
+			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
+
 		}
 
 #ifdef DEBUG_LINE_DETECTION
 		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", detection);
+		chprintf((BaseSequentialStream *)&SD3, "time: %d \r\n", time);
 #endif
 
 #ifdef DEBUG_IMAGE 	//sending image to computer for verification
 		send_to_computer(image);
 #endif
 
+	//20Hz
+	//chThdSleepUntilWindowed(time, time + MS2ST(50));
 	}
 }
 
@@ -133,7 +148,7 @@ static void color_extraction_red(uint8_t *image, uint8_t *image_all_colors){
 static void floating_average(uint8_t *buffer, uint8_t nb_val_for_ave) {
 	uint16_t ave_sum = 0;
 	for (int i = 0; i < (IMAGE_BUFFER_SIZE - nb_val_for_ave); i++) {
-		//ignores the last 10 pixels
+		//ignores the last nb_val_for_ave pixels
 		for (int j = 0; j < nb_val_for_ave; j++) {
 			ave_sum += buffer[i + j];
 		}
@@ -229,8 +244,8 @@ static void send_to_computer(uint8_t *image) {
 }
 
 void process_image_start(void) {
-	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO,
+	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO+10,
 			ProcessImage, NULL);
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO,
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO+10,
 			CaptureImage, NULL);
 }

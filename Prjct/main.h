@@ -27,12 +27,12 @@ extern "C" {
 #define LIN_START				0
 
 //constants for process_image.c: average calculation
-#define AVE_NB 	10
+#define AVE_NB 	30
 
 //constants for process_image.c: edge detection
-#define ED_STEP 				3
-#define CHECK_STEP 				10
-#define	EDGE_HEIGHT_MIN 		20
+#define ED_STEP 				100
+#define CHECK_STEP 				150
+#define	EDGE_HEIGHT_MIN 		30
 
 
 //other constants for the differents parts of the project -> copied from TP4

@@ -45,19 +45,21 @@ static THD_FUNCTION(NavigationThd, arg) {
         if (wall_info & WALL_IN_FRONT_BIT){
         	command_motor(STOP);
         }
-
+        else if (wall_info & LINE_IN_FRONT){
+        	command_motor(STOP);
+        }
         else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
-    		 command_turn(RIGHT_TURN);
+        	command_turn(RIGHT_TURN);
     	}
     	// only right?
     	else if ( (wall_info & WALL_RIGHT_BIT) == 0u ){
-    		 command_turn(LEFT_TURN);
+    		command_turn(LEFT_TURN);
     	}
     	else {
     		command_motor(FORWARD_MOTION);
     	}
 
-        chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
+        //chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
 
 }

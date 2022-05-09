@@ -10,7 +10,7 @@
 #include <motor_controller.h>
 #include <navigation.h>
 
-#define BASE_SPEED 500
+#define BASE_SPEED 500 // was initially 500 steps/s
 #define FORWARD_TIME_AFTER_TURN 3000 // in ms
 #define TURN_TIME 1000 // in ms
 
