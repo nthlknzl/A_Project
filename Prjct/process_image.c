@@ -73,28 +73,25 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		// read the surrounding information from the bus
-		messagebus_topic_read(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-
 		//image processing
 		column_extraction(image_all_colors, img_buff_ptr, COL_START);
 		color_extraction_red(image, image_all_colors);
 		floating_average(image, AVE_NB);
 
+		// read the surrounding information from the bus
+		messagebus_topic_read(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
+
+		//line detection
 		surrounding_info = line_detection(image, surrounding_info);
 
-
-		//int time_s = ST2S(time-publish_time);
-		//chprintf((BaseSequentialStream *)&SD3, "time since last publish: %i \r\n", time_s);
-
-		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
+		if(surrounding_info_published & FLOOR_LINE_IN_FRONT) // surrounding_info = 011...
 		{
 			time = chVTGetSystemTime(); 				//in system ticks
-			if (ST2S(time-publish_time) >= WAIT_S) { 	//ST2S: system ticks to miliseconds
+			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2S: system ticks to miliseconds
 				// Publishes it on the bus.
 				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-				surrounding_info_published = surrounding_info;
-				chprintf((BaseSequentialStream *)&SD3, "RESET. \r\n");
+				surrounding_info_published = 0u;
+				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS)); //no line detection for 2s to pass the line
 			}
 		}
 
@@ -166,7 +163,6 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
     static systime_t time_rising_edge = 0;
 
     static bool falling_edge_detected = FALSE;
-    static bool rising_edge_detected = FALSE;
 
     surrounding_info &= 0b01111111; // reset line detection bit to 0
 
@@ -175,40 +171,20 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 		if (img_values[i] > img_values[i + ED_STEP]) {
 			if (falling_edge_detection(img_values, i)) {
 				falling_edge_detected = TRUE;
-				//time_falling_edge = chVTGetSystemTime();
+				time_falling_edge = chVTGetSystemTime();
 			}
 		//rising edge
 		} else {
 			if (rising_edge_detection(img_values, i) && falling_edge_detected) {
-				//rising_edge_detected = TRUE;
-				//time_rising_edge = chVTGetSystemTime();
-
-				surrounding_info |= FLOOR_LINE_IN_FRONT; //set line detection bit to 1
-				falling_edge_detected = FALSE;
-				rising_edge_detected = FALSE;
+				time_rising_edge = chVTGetSystemTime();
+				//line only if rising edge happened shortly after falling edge
+				if(ST2MS(time_rising_edge-time_falling_edge) < WAIT_MS) {
+					surrounding_info |= FLOOR_LINE_IN_FRONT; //set line detection bit to 1
+					falling_edge_detected = FALSE; //reset falling edge information
+				}
 			}
 		}
-
-
-		// when the code down below is uncommented, the surrounding_info value is constant at 0
-		// having the code commented, surrounding_info is constant at 230 = 0b11100110
-
-
-		/*//no line detected if rising edge happened before falling edge
-		if (time_rising_edge <= time_falling_edge) {
-			surrounding_info &= !FLOOR_COLOR_CHANGE_LIGHTER; //reset rising edge information to 0
-		} else {
-			//line only if rising edge happened shortly after falling edge
-			if(ST2S(time_rising_edge-time_falling_edge) <= WAIT_S) {
-				surrounding_info |= FLOOR_LINE_IN_FRONT; //set line detection bit to 1
-				surrounding_info &= !FLOOR_COLOR_CHANGE_DARKER; //reset color_change_darker bit to 0
-				surrounding_info &= !FLOOR_COLOR_CHANGE_LIGHTER; //reset color_change_lighter bit to 0
-			}
-		}*/
 	}
-
-	//chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", surrounding_info);
-
 	return surrounding_info;
 }
 
