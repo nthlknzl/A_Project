@@ -28,10 +28,12 @@ extern "C" {
 #define AVE_NB 	10
 
 //constants for process_image.c: edge detection
-#define ED_STEP 				100
-#define CHECK_STEP 				150
-#define	EDGE_HEIGHT_MIN 		10
+#define ED_STEP 				40
+#define CHECK_STEP 				20
+#define	EDGE_HEIGHT_MIN 		100
 
+// wait after line detection
+#define WAIT_S 2
 
 //other constants for the differents parts of the project -> copied from TP4
 #define WIDTH_SLOPE				5
@@ -48,9 +50,8 @@ extern "C" {
 
 //for debugging----------------------------------------------------------------------------------------------
 //#define DEBUG
-#define DEBUG_IMAGE
-//#define DEBUG_IMG_EDGE
-//#define DEBUG_LINE_DETECTION
+//#define DEBUG_IMAGE
+#define DEBUG_LINE_DETECTION
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;

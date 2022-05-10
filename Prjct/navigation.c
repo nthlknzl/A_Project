@@ -38,14 +38,13 @@ static THD_FUNCTION(NavigationThd, arg) {
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 	surrounding wall_info = 0u;
 
-
     while(1){
         messagebus_topic_wait(surrounding_topic, &wall_info, sizeof(wall_info));
 
         if (wall_info & WALL_IN_FRONT_BIT){
         	command_motor(STOP);
         }
-        else if (wall_info & LINE_IN_FRONT){
+        else if (wall_info & FLOOR_LINE_IN_FRONT){
         	command_motor(STOP);
         }
         else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
@@ -58,7 +57,6 @@ static THD_FUNCTION(NavigationThd, arg) {
     	else {
     		command_motor(FORWARD_MOTION);
     	}
-
         //chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
 
