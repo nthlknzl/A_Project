@@ -55,19 +55,17 @@ static THD_FUNCTION(ProcessImage, arg) {
 	(void) arg;
 
     systime_t time;
+    static systime_t publish_time=0;
 
 	messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 	surrounding surrounding_info = 0u;
-
+	static surrounding surrounding_info_published = 0u;
 
 	uint8_t *img_buff_ptr;
 	static uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
 	static uint8_t image[IMAGE_BUFFER_SIZE] = { 0 };
 
 	while (1) {
-		static surrounding surrounding_info_published = 0u;
-	    static systime_t publish_time=0;
-
 		//waits until an image has been captured
 		chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
@@ -78,13 +76,14 @@ static THD_FUNCTION(ProcessImage, arg) {
 		color_extraction_red(image, image_all_colors);
 		floating_average(image, AVE_NB);
 
-		// read the surrounding information from the bus
+		//read the surrounding information from the bus
 		messagebus_topic_read(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 
 		//line detection
 		surrounding_info = line_detection(image, surrounding_info);
 
-		if(surrounding_info_published & FLOOR_LINE_IN_FRONT) // surrounding_info = 011...
+		//publish surrounding_info after reset of line_detection bit
+		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
 		{
 			time = chVTGetSystemTime(); 				//in system ticks
 			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2S: system ticks to miliseconds
@@ -94,7 +93,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS)); //no line detection for 2s to pass the line
 			}
 		}
-
+		//publish surrounding_info after set of line_detection bit
 		if (surrounding_info & FLOOR_LINE_IN_FRONT)  {
 #ifdef DEBUG_LINE_DETECTION
 			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
