@@ -39,7 +39,7 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 
         int debug_left_value = get_prox(IR_SENSOR_LEFT_CENTER);
         int debug_right_value = get_prox(IR_SENSOR_RIGHT_CENTER);
-        chprintf((BaseSequentialStream *)&SD3, "left: %d right: %d \r\n", debug_left_value, debug_right_value);
+        //chprintf((BaseSequentialStream *)&SD3, "left: %d right: %d \r\n", debug_left_value, debug_right_value);
 
 		// read the surrounding information from the bus
 		messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
