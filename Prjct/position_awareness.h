@@ -13,9 +13,10 @@ typedef enum {BOTH_WALLS, NO_WALLS, ONLY_LEFT_WALL, ONLY_RIGHT_WALL} surrounding
 
 
 
+void situational_awareness_thread_start(void);
+
 /* return the difference between the left and the right (l-r) IR sensor. */
 int16_t get_left_right_error( void );
-float get_left_crossroad_center_error( void );
 
 // getter for detected edges
  //Returns True iff the proximity sensors detect an edge on the left side.

@@ -10,9 +10,8 @@
 #include <motor_controller.h>
 #include <navigation.h>
 
-#define BASE_SPEED 500
-#define FORWARD_TIME_AFTER_TURN 3000 // in ms
-#define TURN_TIME 1000 // in ms
+#define BASE_SPEED 500 // was initially 500 steps/s
+#define TURN_TIME 800 // in ms
 
 /* General concept
  * ---------------
@@ -34,6 +33,7 @@ extern messagebus_t bus;
 // constants for the controller
 #define Kp 0.1
 #define  Ki 0.0001
+#define Kd 0.2
 
 
 
@@ -56,8 +56,8 @@ static THD_FUNCTION(MotorController, arg) {
 
         //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
 
-        //20Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(50));
+        //40Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(25));
     }
 }
 /*
@@ -73,6 +73,12 @@ void control_forward_motion( void ){
     // P
 	speed_left += Kp * lr_error;
 	speed_right -= Kp * lr_error;
+
+	//D
+	static int16_t previous_lr_error = 0;
+	speed_left += Kd * (lr_error-previous_lr_error);
+	speed_right -= Kd * (lr_error-previous_lr_error);
+
 	// I
 	static int16_t integral_error = 0;
 	integral_error += lr_error;
@@ -80,6 +86,9 @@ void control_forward_motion( void ){
 	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;} */ // deleted bc of overflow and prob. not needed
 	speed_left += Ki * integral_error;
 	speed_right -= Ki * integral_error;
+
+	// set previous error for next call
+	previous_lr_error = lr_error;
 }
 
 /*
@@ -137,7 +146,7 @@ void update_speed( enum motion_state state){
  * Start the thread
  */
 void motor_controller_start(void){
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+2, MotorController, NULL);
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+20, MotorController, NULL);
 }
 
 /*

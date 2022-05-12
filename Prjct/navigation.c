@@ -12,8 +12,11 @@
 
 #include <position_awareness.h>
 
-#define FORWARD_TIME_AFTER_TURN 1000000 // in us
-#define TURN_TIME 700000 // in us
+#define FORWARD_TIME_BEFORE_TURN 700000
+#define FORWARD_TIME_AFTER_TURN 800000 // in us
+#define TURN_TIME 600000 // in us
+#define AFTER_TURN_FORWARD_DELAY_TICKS 40// in 25ms, must be <255
+#define SLEEP_TIME_AFTER_COMMAND 500000
 
 /* General concept
  * ---------------
@@ -34,19 +37,30 @@ static THD_FUNCTION(NavigationThd, arg) {
     (void)arg;
 
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
-    surrounding_walls_info surrounding;
-
+	surrounding wall_info = 0u;
 
     while(1){
-        messagebus_topic_wait(surrounding_topic, &surrounding, sizeof(surrounding));
-        switch(surrounding){
-        case BOTH_WALLS: break;
-        case NO_WALLS: break;
-        case ONLY_LEFT_WALL: command_turn(LEFT_TURN); break;
-        case ONLY_RIGHT_WALL: command_turn(RIGHT_TURN); break;
+        messagebus_topic_wait(surrounding_topic, &wall_info, sizeof(wall_info));
+
+        if (wall_info & WALL_IN_FRONT_BIT){
+        	command_motor(STOP);
         }
-        chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", surrounding);
+        else if (wall_info & FLOOR_LINE_IN_FRONT){
+        	command_motor(STOP);
+        }
+        else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
+        	command_turn(RIGHT_TURN);
+    	}
+    	// only right?
+    	else if ( (wall_info & WALL_RIGHT_BIT) == 0u ){
+    		command_turn(LEFT_TURN);
+    	}
+    	else {
+    		command_motor(FORWARD_MOTION);
+    	}
+        //chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
+
 }
 
 /*
@@ -59,11 +73,45 @@ void navigation_thread_start(void){
 void command_turn(enum motion_state direction){
 	// pointer to the bus topic to write to the motors
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
-	enum motion_state motor_state = direction; // store the info command to be published to the bus
+
+	// go forward
+	enum motion_state motor_state = FORWARD_MOTION; // store the info command to be published to the bus
+	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	chThdSleepMicroseconds(FORWARD_TIME_BEFORE_TURN); // wait a certain time for the robot to turn
+
+	// do the turn
+	motor_state = direction; // store the info command to be published to the bus
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
 	chThdSleepMicroseconds(TURN_TIME); // wait a certain time for the robot to turn
+
+	// go forward
 	motor_state = FORWARD_MOTION; // go forward after the turn
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
-	chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
+	systime_t time;
+	messagebus_topic_t *surrounding_topic;
+	surrounding wall_info = 0u;
+	for(uint8_t poll_nr = 0; poll_nr<AFTER_TURN_FORWARD_DELAY_TICKS; poll_nr++ ){
+        time = chVTGetSystemTime();
+        // read surounding information
+        surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
+        messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
+        if (wall_info & WALL_IN_FRONT_BIT){
+        	command_motor(STOP);
+        	return;
+        }
+		chThdSleepUntilWindowed(time, time + MS2ST(25));
+	}
+	//chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
 }
+
+void command_motor( enum motion_state command ){
+	// pointer to the bus topic to write to the motors
+
+	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
+	messagebus_topic_publish(state_topic, &command, sizeof(command));
+
+	//chThdSleepMicroseconds(SLEEP_TIME_AFTER_COMMAND);
+
+}
+
 

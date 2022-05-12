@@ -15,6 +15,7 @@
 #include <pi_regulator.h>
 #include <process_image.h>
 #include <motor_controller.h>
+#include <navigation.h>
 
 #include <arm_math.h>
 
@@ -55,18 +56,17 @@ int main(void)
     //starts the USB communication
     usb_start();
     //starts the camera
-    //dcmi_start();
-    //po8030_start();
+    dcmi_start();
+    po8030_start();
     //inits the motors
     motors_init();
 
 	//starts the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	//process_image_start();
+	process_image_start();
 
 	init_proximity_sensors();
 
-	// init messagebus
 	// init the messagebus
 		enum motion_state initital_state = FORWARD_MOTION;
 		messagebus_topic_t motor_topic;
@@ -75,15 +75,16 @@ int main(void)
 		messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
 		messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
 
-		// create a messagebus topic to publish information about the surrounding
-		surrounding_walls_info surrounding = NO_WALLS;
+		// create a messagebus topic to publish information about the surrounding walls
+		surrounding wall_info = 0u;
 		messagebus_topic_t surrounding_topic;
 		MUTEX_DECL(surrounding_topic_lock);
 		CONDVAR_DECL(surrounding_topic_condvar);
-		messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
+		messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &wall_info, sizeof(wall_info));
 		messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
 
 	//motor_controller_test();
+	situational_awareness_thread_start();
 	motor_controller_start();
 	navigation_thread_start();
 
