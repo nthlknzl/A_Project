@@ -15,6 +15,7 @@
 #define FORWARD_TIME_BEFORE_TURN 700000
 #define FORWARD_TIME_AFTER_TURN 800000 // in us
 #define TURN_TIME 600000 // in us
+#define AFTER_TURN_FORWARD_DELAY_TICKS 40// in 25ms, must be <255
 #define SLEEP_TIME_AFTER_COMMAND 500000
 
 /* General concept
@@ -86,7 +87,21 @@ void command_turn(enum motion_state direction){
 	// go forward
 	motor_state = FORWARD_MOTION; // go forward after the turn
 	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
-	chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
+	systime_t time;
+	messagebus_topic_t *surrounding_topic;
+	surrounding wall_info = 0u;
+	for(uint8_t poll_nr = 0; poll_nr<AFTER_TURN_FORWARD_DELAY_TICKS; poll_nr++ ){
+        time = chVTGetSystemTime();
+        // read surounding information
+        surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
+        messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
+        if (wall_info & WALL_IN_FRONT_BIT){
+        	command_motor(STOP);
+        	return;
+        }
+		chThdSleepUntilWindowed(time, time + MS2ST(25));
+	}
+	//chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
 }
 
 void command_motor( enum motion_state command ){
