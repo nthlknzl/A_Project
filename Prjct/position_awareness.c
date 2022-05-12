@@ -18,7 +18,7 @@
 #define IR_SENSOR_LEFT_FRONT 7u
 #define IR_SENSOR_RIGHT_FRONT 0u
 
-#define IR_SENSOR_THRESHOLD 110 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD 80 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 1000
 // static variables
 extern messagebus_t bus;
@@ -46,6 +46,7 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 		messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
         // reset wall information to 0 without changing line information
 		wall_info &= 0b11111000;
+
 
     	if(get_prox(IR_SENSOR_LEFT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_LEFT_BIT ;}
     	if(get_prox(IR_SENSOR_RIGHT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_RIGHT_BIT ;}
@@ -104,8 +105,8 @@ int16_t get_left_right_error( void ){
 	}
 
 	// we limit the maximal error as the values get extremely high at close distances -> no effective control possible.
-	if (error > 500){error = 500;}
-	else if (error < -500){error = -500;}
+	if (error > 1000){error = 1000;}
+	else if (error < -1000){error = -1000;}
 	return error;
 
 }

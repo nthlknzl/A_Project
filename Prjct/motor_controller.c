@@ -11,7 +11,6 @@
 #include <navigation.h>
 
 #define BASE_SPEED 500 // was initially 500 steps/s
-#define FORWARD_TIME_AFTER_TURN 3000 // in ms
 #define TURN_TIME 800 // in ms
 
 /* General concept
@@ -32,9 +31,9 @@ static int16_t speed_right = 0;
 extern messagebus_t bus;
 
 // constants for the controller
-#define Kp 0.15
-#define  Ki 0 //0.0001
-#define Kd 0.6
+#define Kp 0.1
+#define  Ki 0.0001
+#define Kd 0.2
 
 
 
