@@ -18,7 +18,7 @@
 #define IR_SENSOR_LEFT_FRONT 7u
 #define IR_SENSOR_RIGHT_FRONT 0u
 
-#define IR_SENSOR_THRESHOLD 100 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD 110 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 1000
 // static variables
 extern messagebus_t bus;
@@ -37,21 +37,20 @@ static THD_FUNCTION(SituationalAwareness, arg) {
     while(1){
         time = chVTGetSystemTime();
 
+        int debug_left_value = get_prox(IR_SENSOR_LEFT_CENTER);
+        int debug_right_value = get_prox(IR_SENSOR_RIGHT_CENTER);
+        chprintf((BaseSequentialStream *)&SD3, "left: %d right: %d \r\n", debug_left_value, debug_right_value);
+
 		// read the surrounding information from the bus
 		messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
 		messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
         // reset wall information to 0 without changing line information
 		wall_info &= 0b11111000;
-/*
+
     	if(get_prox(IR_SENSOR_LEFT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_LEFT_BIT ;}
     	if(get_prox(IR_SENSOR_RIGHT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_RIGHT_BIT ;}
     	if((get_prox(IR_SENSOR_LEFT_FRONT) + get_prox(IR_SENSOR_RIGHT_FRONT)) > IR_SENSOR_FRONT_SUM_THRESHOLD){ wall_info |= WALL_IN_FRONT_BIT ;}
-*/
 
-		// debug code
-		wall_info |= WALL_LEFT_BIT;
-		wall_info |= WALL_RIGHT_BIT;
-		// end debug code
 
     	// see if the situation has changed and publish if yes
     	if(wall_info != wall_info_published){

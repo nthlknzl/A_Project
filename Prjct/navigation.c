@@ -44,10 +44,10 @@ static THD_FUNCTION(NavigationThd, arg) {
 
         if (wall_info & WALL_IN_FRONT_BIT){
         	command_motor(STOP);
-        }
+        }/*
         else if (wall_info & LINE_IN_FRONT){
         	command_motor(STOP);
-        }
+        }*/
         else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
         	command_turn(RIGHT_TURN);
     	}
