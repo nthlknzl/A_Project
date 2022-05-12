@@ -18,7 +18,7 @@
 #define IR_SENSOR_LEFT_FRONT 7u
 #define IR_SENSOR_RIGHT_FRONT 0u
 
-#define IR_SENSOR_THRESHOLD 80 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD 50 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 1000
 // static variables
 extern messagebus_t bus;
@@ -62,13 +62,13 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 			messagebus_topic_publish(surrounding_topic, &wall_info, sizeof(wall_info));
     	}
 
-        //20Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(50));
+        //40Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(25));
     }
 }
 
 void situational_awareness_thread_start(void){
-	chThdCreateStatic(waSituationalAwareness, sizeof(waSituationalAwareness), NORMALPRIO+3, SituationalAwareness, NULL);
+	chThdCreateStatic(waSituationalAwareness, sizeof(waSituationalAwareness), NORMALPRIO+20, SituationalAwareness, NULL);
 }
 
 

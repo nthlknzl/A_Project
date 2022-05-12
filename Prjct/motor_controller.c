@@ -56,8 +56,8 @@ static THD_FUNCTION(MotorController, arg) {
 
         //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
 
-        //20Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(50));
+        //40Hz
+        chThdSleepUntilWindowed(time, time + MS2ST(25));
     }
 }
 /*
@@ -146,7 +146,7 @@ void update_speed( enum motion_state state){
  * Start the thread
  */
 void motor_controller_start(void){
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+2, MotorController, NULL);
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+20, MotorController, NULL);
 }
 
 /*
