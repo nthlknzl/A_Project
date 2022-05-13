@@ -12,8 +12,8 @@
 
 #include <position_awareness.h>
 
-#define FORWARD_TIME_BEFORE_TURN 700000
-#define FORWARD_TIME_AFTER_TURN 800000 // in us
+#define FORWARD_TIME_BEFORE_TURN 500000
+#define FORWARD_TIME_AFTER_TURN 700000 // in us
 #define TURN_TIME 600000 // in us
 #define AFTER_TURN_FORWARD_DELAY_TICKS 40// in 25ms, must be <255
 #define SLEEP_TIME_AFTER_COMMAND 500000
