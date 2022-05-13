@@ -1,7 +1,7 @@
 #ifndef MOTOR_CONTROLLER_H
 #define MOTOR_CONTROLLER_H
 
-#include <control.h>
+#include <navigation.h>
 
 typedef enum {LEFT, RIGHT} turn_direction; // bruchts die variable??
 

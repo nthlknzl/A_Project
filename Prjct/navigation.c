@@ -31,6 +31,9 @@
 
 extern messagebus_t bus;
 
+static enum motion_state motor_state = STOP;
+
+
 static THD_WORKING_AREA(waNavigation, 256);
 static THD_FUNCTION(NavigationThd, arg) {
     chRegSetThreadName(__FUNCTION__);
@@ -41,7 +44,10 @@ static THD_FUNCTION(NavigationThd, arg) {
 
     while(1){
         messagebus_topic_wait(surrounding_topic, &wall_info, sizeof(wall_info));
+        // the motor modes only need to be updated if there is new information
 
+        // the following lines decide what to do based on the walls and lines detected. This can be modified to
+        // change the robots behaviour
         if (wall_info & WALL_IN_FRONT_BIT){
         	command_motor(STOP);
         }
@@ -58,7 +64,6 @@ static THD_FUNCTION(NavigationThd, arg) {
     	else {
     		command_motor(FORWARD_MOTION);
     	}
-        //chprintf((BaseSequentialStream *)&SD3, "nav s: %d \r\n", wall_info);
     }
 
 }
@@ -70,26 +75,33 @@ void navigation_thread_start(void){
 	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+4, NavigationThd, NULL);
 }
 
+
+/*
+ * command_turn:
+ * This functions performas a left or right turn by
+ * 		1. drive forward (to hit the center of the street)
+ * 		2. turn on the spot
+ * 		3. drive forward (to go back into the street)
+ */
 void command_turn(enum motion_state direction){
 	// pointer to the bus topic to write to the motors
-	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
 
-	// go forward
-	enum motion_state motor_state = FORWARD_MOTION; // store the info command to be published to the bus
-	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	// 1. go forward
+	command_motor(FORWARD_MOTION);
 	chThdSleepMicroseconds(FORWARD_TIME_BEFORE_TURN); // wait a certain time for the robot to turn
 
-	// do the turn
-	motor_state = direction; // store the info command to be published to the bus
-	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	// 2. do the turn
+	command_motor(direction);
 	chThdSleepMicroseconds(TURN_TIME); // wait a certain time for the robot to turn
 
-	// go forward
-	motor_state = FORWARD_MOTION; // go forward after the turn
-	messagebus_topic_publish(state_topic, &motor_state, sizeof(motor_state));
+	// 3. go forward
+	command_motor(FORWARD_MOTION);
+
 	systime_t time;
 	messagebus_topic_t *surrounding_topic;
 	surrounding wall_info = 0u;
+	// this for loop ensures that the e-puck does not blindly drives forward after the turn but detects walls and stops if needed.
+	// The robot checks frequently if there is a wall in front of him and stops if needed.
 	for(uint8_t poll_nr = 0; poll_nr<AFTER_TURN_FORWARD_DELAY_TICKS; poll_nr++ ){
         time = chVTGetSystemTime();
         // read surounding information
@@ -106,7 +118,7 @@ void command_turn(enum motion_state direction){
 
 void command_motor( enum motion_state command ){
 	// pointer to the bus topic to write to the motors
-
+	motor_state = command;
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
 	messagebus_topic_publish(state_topic, &command, sizeof(command));
 

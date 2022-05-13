@@ -31,7 +31,7 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 
     systime_t time;
 
-    surrounding wall_info = 0u;
+    surrounding wall_info = 0u; // this byte stores the infomation about walls in proximity of the e-puck. See the typedef for more details
 	surrounding wall_info_published = 0u;
 
     while(1){

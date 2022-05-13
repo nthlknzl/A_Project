@@ -1,4 +1,4 @@
-#include "ch.h"
+/*#include "ch.h"
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
@@ -48,3 +48,4 @@ static THD_FUNCTION(ReactOnDetection, arg) {
 		messagebus_topic_publish(&motor_state_topic, &state, sizeof(state));
 	}
 }
+*/
