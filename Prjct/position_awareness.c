@@ -11,7 +11,7 @@
 #include <main.h>
 #include <navigation.h>
 
-//#define DEBUG
+#define DEBUG_PROX
 
 #define IR_SENSOR_LEFT_CENTER 5u
 #define IR_SENSOR_RIGHT_CENTER 2u
@@ -37,20 +37,25 @@ static THD_FUNCTION(SituationalAwareness, arg) {
     while(1){
         time = chVTGetSystemTime();
 
-        int debug_left_value = get_prox(IR_SENSOR_LEFT_CENTER);
-        int debug_right_value = get_prox(IR_SENSOR_RIGHT_CENTER);
+	#ifdef DEBUG_PROX
+        int16_t debug_left_value = get_prox(IR_SENSOR_LEFT_CENTER);
+        int16_t debug_right_value = get_prox(IR_SENSOR_RIGHT_CENTER);
         chprintf((BaseSequentialStream *)&SD3, "left: %d right: %d \r\n", debug_left_value, debug_right_value);
+	#endif
 
 		// read the surrounding information from the bus
 		messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
 		messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
-        // reset wall information to 0 without changing line information
+        // reset wall information (bit 1-3) to 0 without changing line information
 		wall_info &= 0b11111000;
 
-
+		// set the wall_info bits
     	if(get_prox(IR_SENSOR_LEFT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_LEFT_BIT ;}
     	if(get_prox(IR_SENSOR_RIGHT_CENTER) > IR_SENSOR_THRESHOLD){ wall_info |= WALL_RIGHT_BIT ;}
+    	// check if there's a wall in front of the e-puck. This can be triggered by two criterisas
+    	// 1. the two sensors added are at IR_SENSOR_RIGHT_FRONT
     	if((get_prox(IR_SENSOR_LEFT_FRONT) + get_prox(IR_SENSOR_RIGHT_FRONT)) > IR_SENSOR_FRONT_SUM_THRESHOLD){ wall_info |= WALL_IN_FRONT_BIT ;}
+    	// 2. the two sensors added are at IR_SENSOR_RIGHT_FRONT
     	else if((get_prox(IR_SENSOR_LEFT_FRONT) > IR_SENSOR_FRONT_SUM_THRESHOLD*0.75) || (get_prox(IR_SENSOR_RIGHT_FRONT) > IR_SENSOR_FRONT_SUM_THRESHOLD*0.75)){ wall_info |= WALL_IN_FRONT_BIT ;}
 
 
