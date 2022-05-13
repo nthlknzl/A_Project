@@ -11,6 +11,8 @@
 
 extern messagebus_t bus;
 
+#define FIRST_COL 0
+
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
@@ -72,7 +74,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//image processing
-		column_extraction(image_all_colors, img_buff_ptr, COL_START);
+		column_extraction(image_all_colors, img_buff_ptr, FIRST_COL);
 		color_extraction_red(image, image_all_colors);
 		cumulative_moving_average(image, AVE_NB);
 
@@ -117,13 +119,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 /* Extracts one column
  *
- *  input: column nb to extract (col between 1 and 480)
+ *  input: column nb (of the captured image!) -> default value 0 = first captured column
  */
 static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col){
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE); i += 1) {
 		//2 bytes per pixel
-		image_all_colors[2*i] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i)*2];
-		image_all_colors[2*i+1] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i)*2+1];
+		image_all_colors[2*i] = (uint8_t) img_buff_ptr[(col+IMAGE_COLUMN_SIZE*i)*2];
+		image_all_colors[2*i+1] = (uint8_t) img_buff_ptr[(col+IMAGE_COLUMN_SIZE*i)*2+1];
 	}
 }
 
