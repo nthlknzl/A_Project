@@ -50,7 +50,7 @@ extern "C" {
 
 //for debugging----------------------------------------------------------------------------------------------
 //#define DEBUG
-//#define DEBUG_IMAGE
+#define DEBUG_IMAGE
 //#define DEBUG_LINE_DETECTION
 
 /** Robot wide IPC bus. */
