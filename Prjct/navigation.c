@@ -33,6 +33,12 @@ extern messagebus_t bus;
 
 static motion_state motor_state = STOP;
 
+static void command_turn(motion_state direction); // command a left or right turn
+static void command_starp_turn(motion_state direction); // command a turn on the spot
+static void command_motor(motion_state command); // send a command to the motor
+static void command_emergency_stop_and_search(void); // stop the robot. take a turn if there are no obstacles there.
+static void command_stop_and_go(void); //stop the robot after line detection, continue
+
 
 static THD_WORKING_AREA(waNavigation, 256);
 static THD_FUNCTION(NavigationThd, arg) {
@@ -52,7 +58,7 @@ static THD_FUNCTION(NavigationThd, arg) {
         	command_emergency_stop_and_search();
         }
         else if (wall_info & FLOOR_LINE_IN_FRONT){
-        	command_motor(STOP);
+        	command_stop_and_go();
         }
         else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
         	command_turn(RIGHT_TURN);
@@ -64,8 +70,8 @@ static THD_FUNCTION(NavigationThd, arg) {
     		command_motor(FORWARD_MOTION);
     	}
     }
-
 }
+
 
 /*
  * Start the thread
@@ -133,8 +139,8 @@ void command_motor(motion_state command ){
 
 void command_emergency_stop_and_search( void ){
 	command_motor(STOP);
-	surrounding wall_info = 0u;
 	chThdSleepMilliseconds(WAIT_TIME_AFTER_STOP);
+	surrounding wall_info = 0u;
     messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 	messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
 	if (wall_info & WALL_IN_FRONT_BIT){
@@ -152,4 +158,20 @@ void command_emergency_stop_and_search( void ){
 	 command_motor(FORWARD_MOTION); // continue driving forward after the turn or removal of the object
 }
 
+void command_stop_and_go(void) {
+	systime_t time;
+	static systime_t time_go_after_line_detected = 0;
+
+	//continue forward motion if line was detected less than 1s before (time to pass the line)
+	time = chVTGetSystemTime();
+	if (ST2S(time-time_go_after_line_detected) > 1) { //ST2S: system ticks to seconds
+		time_go_after_line_detected = 0;
+	}
+	if (time_go_after_line_detected == 0) {
+		command_motor(STOP);
+    	chThdSleepMilliseconds(WAIT_TIME_AFTER_STOP);
+    	time_go_after_line_detected = chVTGetSystemTime();
+	}
+	command_motor(FORWARD_MOTION);
+}
 
