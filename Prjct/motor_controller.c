@@ -25,6 +25,7 @@
  * */
 
 
+// store the speed of the motors. This variables are used to transfer information between some functions in this file!
 static int16_t speed_left = 0;
 static int16_t speed_right = 0;
 
@@ -51,8 +52,16 @@ static THD_FUNCTION(MotorController, arg) {
         time = chVTGetSystemTime();
         messagebus_topic_read(state_topic, &state, sizeof(state)); // we use topic-read and not topicWait in order to allow the motor_controller to run more frequent than the system control thread. This is useful for the PID controller in this thread.
 
-        update_speed(state);
-        update_motors();
+        // update the speed variables given the state
+        switch(state){
+        	case FORWARD_MOTION: control_forward_motion(); break;
+        	case STOP: stop_motors(); break;
+        	case LEFT_TURN: turn(LEFT_TURN); break;
+        	case RIGHT_TURN: turn(RIGHT_TURN); break;
+        	default: control_forward_motion(); // in case there's an undefined state somewhere.
+            }
+
+        update_motors(); // write the speed variables to the motor
 
         //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
 
@@ -62,37 +71,39 @@ static THD_FUNCTION(MotorController, arg) {
 }
 /*
  * implements a PID controller with the error between the left and right proximity sensor
+ * sets the speed_left and speed_right variables as output
  */
 void control_forward_motion( void ){
 	// get left-right error
 	int16_t lr_error = get_left_right_error();
 
-	speed_left = BASE_SPEED;
-	speed_right = BASE_SPEED;
+	int16_t control_value = 0; // in the end: speed_left = BASE_SPEED + control_value and speed_right = BASE_SPEED - control_value
 
     // P
-	speed_left += Kp * lr_error;
-	speed_right -= Kp * lr_error;
+	control_value += Kp * lr_error;
 
 	//D
 	static int16_t previous_lr_error = 0;
-	speed_left += Kd * (lr_error-previous_lr_error);
-	speed_right -= Kd * (lr_error-previous_lr_error);
+	control_value += Kd * (lr_error-previous_lr_error);
 
 	// I
 	static int16_t integral_error = 0;
 	integral_error += lr_error;
 	/*if(integral_error > BASE_SPEED/Ki){integral_error = 0.2*BASE_SPEED/Ki;}
 	else if(integral_error < - BASE_SPEED/Ki){integral_error = -0.2*BASE_SPEED/Ki;} */ // deleted bc of overflow and prob. not needed
-	speed_left += Ki * integral_error;
-	speed_right -= Ki * integral_error;
+	control_value += Ki * integral_error;
 
 	// set previous error for next call
 	previous_lr_error = lr_error;
+
+	// set the speed variables
+	speed_left = BASE_SPEED + control_value;
+	speed_right = BASE_SPEED - control_value;
+
 }
 
 /*
- * sets the variables to stop the motor
+ * sets speed_left and speed_right to stop the motor
  */
 void stop_motors( void ){
 	speed_left = 0;
@@ -100,17 +111,19 @@ void stop_motors( void ){
 }
 
 /* sets the speed_left and speed_right for a turn
- * @input turn_direction tirection : enum with the values LEFT or RIGHT determining which way to turn
+ * @input turn_direction direction : enum with the values LEFT_TURN or RIGHT_TURN determining which way to turn
+ * in case an other enum value is received the function does nothing.
  */
 void turn(motion_state direction){
 	switch(direction){
 		case LEFT_TURN: speed_left = BASE_SPEED; speed_right = -BASE_SPEED; break;
 		case RIGHT_TURN: speed_left = -BASE_SPEED; speed_right = BASE_SPEED; break;
+		default: break;
 	}
 }
 
 /*
- * uses the variables speed_left and speed_right to set the motor speed.
+ * uses the variables speed_left and speed_right to set the motor speed while controling the speed limit.
  */
 void update_motors( void ){
     // check that the speed is within the allowed limits
@@ -125,122 +138,11 @@ void update_motors( void ){
     left_motor_set_speed(speed_left);
 }
 
-/*
- * @ input enum motion_state state : the current state (forward, left_turn, right_turn, or stop) of the system
- * The function updates updates the variables speed_left and speed_right according to the current state.
- */
-void update_speed(motion_state state){
-    // check state and execute it - this sets the motor speed variables
-    switch(state){
-    	case FORWARD_MOTION: control_forward_motion(); break;
-    	case STOP: stop_motors(); break;
-    	case LEFT_TURN: turn(LEFT_TURN); break;
-    	case RIGHT_TURN: turn(RIGHT_TURN); break;
-    	default: control_forward_motion(); // in case there's an undefined state somewhere.
-        }
-}
-
-
 
 /*
  * Start the thread
  */
 void motor_controller_start(void){
 	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+20, MotorController, NULL);
-}
-
-/*
- * Test function for the motor. comment or uncomment lines to perform tests.
- */
-void motor_controller_test( void ){
-	/*
-	 * This test sets the motor_control threat to high priority (+20) to ensure its isolation from the other
-	 * threads before cycling through the states:
-	 * 1. forward
-	 * 2. stop
-	 * 3. left turn
-	 * 4. right turn
-	 *
-	 */
-
-	// init the messagebus
-	motion_state initital_state = FORWARD_MOTION;
-	messagebus_topic_t motor_topic;
-	MUTEX_DECL(motor_topic_lock);
-	CONDVAR_DECL(motor_topic_condvar);
-	messagebus_topic_init(&motor_topic, &motor_topic_lock, &motor_topic_condvar, &initital_state, sizeof(initital_state));
-	messagebus_advertise_topic(&bus, &motor_topic, "/motor_state");
-
-	// create a messagebus topic to publish information about the surrounding
-	surrounding_walls_info surrounding = NO_WALLS;
-	messagebus_topic_t surrounding_topic;
-	MUTEX_DECL(surrounding_topic_lock);
-	CONDVAR_DECL(surrounding_topic_condvar);
-	messagebus_topic_init(&surrounding_topic, &surrounding_topic_lock, &surrounding_topic_condvar, &surrounding, sizeof(surrounding));
-	messagebus_advertise_topic(&bus, &surrounding_topic, "/surrounding");
-
-
-	// start the thread with high priority
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO + 20, MotorController, NULL);
-	navigation_thread_start();
-
-	/*
-	 * Test 1: cycle through all the states
-	 */
-	/*
-	while(1){
-		//enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN}; // temporary definition
-		for(enum motion_state state = FORWARD_MOTION; state<=RIGHT_TURN; state++){
-			messagebus_topic_publish(&motor_topic, &state, sizeof(state));
-			chThdSleepMicroseconds(2000000);
-		}
-	}
-*/
-
-	/*
-	 * Test 2: Forward only
-	 */
-
-	/*
-	while(1){
-		enum motion_state state = FORWARD_MOTION;
-		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
-		chThdSleepMicroseconds(700000);
-	}
-	*/
-
-	/*
-	 * Test 3: left square
-	 */
-
-	/*
-	enum motion_state state = FORWARD_MOTION;
-	while(1){
-		state = FORWARD_MOTION;
-		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
-		chThdSleepMicroseconds(4000000);
-
-		state = LEFT_TURN;
-		messagebus_topic_publish(&motor_topic, &state, sizeof(state));
-		chThdSleepMicroseconds(700000);
-
-	}
-	*/
-
-	/*
-	 * Test 4: use the navigation thread
-	 */
-
-
-	//navigation_thread_start();
-
-	motion_state state = FORWARD_MOTION;
-	messagebus_topic_publish(&motor_topic, &state, sizeof(state));
-	chThdSleepMicroseconds(1000000);
-
-	while(1){
-		chThdSleepMicroseconds(1000000);
-	}
-
 }
 

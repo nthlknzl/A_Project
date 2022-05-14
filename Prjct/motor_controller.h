@@ -8,7 +8,6 @@ void motor_controller_test( void );
 
 // control functions
 void update_motors( void );
-void update_speed(motion_state state);
 
 // states
 void control_forward_motion( void );
