@@ -57,7 +57,6 @@ static THD_FUNCTION(NavigationThd, arg) {
         else if ( (wall_info & WALL_LEFT_BIT) == 0u ){
         	command_turn(RIGHT_TURN);
     	}
-    	// only right?
     	else if ( (wall_info & WALL_RIGHT_BIT) == 0u ){
     		command_turn(LEFT_TURN);
     	}

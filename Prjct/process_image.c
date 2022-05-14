@@ -6,7 +6,6 @@
 #include <main.h>
 #include <camera/po8030.h>
 #include <process_image.h>
-#include <control.h>
 #include <navigation.h>
 
 extern messagebus_t bus;
@@ -31,7 +30,7 @@ extern messagebus_t bus;
 #define WAIT_MS 1000
 
 //for debugging
-//#define DEBUG_IMAGE
+#define DEBUG_IMAGE
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);

@@ -63,8 +63,6 @@ static THD_FUNCTION(MotorController, arg) {
 
         update_motors(); // write the speed variables to the motor
 
-        //chprintf((BaseSequentialStream *)&SD3, "left: %d \t right: %d \r\n", speed_left, speed_right);
-
         //40Hz
         chThdSleepUntilWindowed(time, time + MS2ST(25));
     }
