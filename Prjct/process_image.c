@@ -88,7 +88,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
 		{
 			time = chVTGetSystemTime(); 				//in system ticks
-			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2S: system ticks to miliseconds
+			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2MS: system ticks to miliseconds
 				// Publishes it on the bus.
 				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 				surrounding_info_published = 0u;
@@ -201,7 +201,7 @@ static bool falling_edge_detection(uint8_t *img_values, uint16_t i) {
 	}
 	//no edge if there's an edge in the other direction within less than CHECK_STEP pixels
 	else if ((img_values[i + ED_STEP + CHECK_STEP] > img_values[i + ED_STEP]) &&
-			 (img_values[i+ED_STEP+CHECK_STEP]-img_values[i+ED_STEP]) > 2*EDGE_HEIGHT_MIN) {
+			 (img_values[i+ED_STEP+CHECK_STEP]-img_values[i+ED_STEP]) > EDGE_HEIGHT_MIN) {
 		return FALSE;
 	}
 	//edge detected
@@ -217,7 +217,7 @@ static bool rising_edge_detection(uint8_t *img_values, uint16_t i) {
 	}
 	//no edge if there's an edge in the other direction within less than CHECK_STEP pixels
 	else if ((img_values[i + ED_STEP + CHECK_STEP] < img_values[i + ED_STEP]) &&
-			 (img_values[i+ED_STEP] - img_values[i+ED_STEP+CHECK_STEP]) > 2*EDGE_HEIGHT_MIN) {
+			 (img_values[i+ED_STEP] - img_values[i+ED_STEP+CHECK_STEP]) > EDGE_HEIGHT_MIN) {
 		return FALSE;
 	}
 	//edge detected
