@@ -11,7 +11,7 @@
 #include <main.h>
 #include <navigation.h>
 
-#define DEBUG_PROX
+//#define DEBUG_PROX
 
 #define IR_SENSOR_LEFT_CENTER 5u
 #define IR_SENSOR_RIGHT_CENTER 2u

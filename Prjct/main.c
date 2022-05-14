@@ -12,7 +12,6 @@
 #include <camera/po8030.h>
 #include <position_awareness.h>
 
-#include <pi_regulator.h>
 #include <process_image.h>
 #include <motor_controller.h>
 #include <navigation.h>
@@ -61,8 +60,7 @@ int main(void)
     //inits the motors
     motors_init();
 
-	//starts the threads for the pi regulator and the processing of the image
-	//pi_regulator_start();
+	//starts the thread for the processing of the image
 	process_image_start();
 
 	init_proximity_sensors();

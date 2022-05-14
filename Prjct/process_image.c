@@ -11,13 +11,35 @@
 
 extern messagebus_t bus;
 
+//constants for image capture
+#define IMAGE_BUFFER_SIZE		480	//nb of pixels in one column
+#define IMAGE_BUFFER_SIZE_SEND	640	//the python file works with a buffer size of 640
+#define IMAGE_COLUMN_SIZE		2 	//2 pixels per column
+#define COL_START				320
+#define LIN_START				0
+
+//constants for general image procession
+#define AVE_NB 	30
+#define FIRST_COL 0
+
+//constants for line detection
+#define ED_STEP 				40
+#define CHECK_STEP 				40
+#define	EDGE_HEIGHT_MIN 		60
+
+//wait after line detection
+#define WAIT_MS 1000
+
+//for debugging
+//#define DEBUG_IMAGE
+
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 
 static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col);
 static void color_extraction_red(uint8_t *image, uint8_t *img_buff_ptr);
-static void floating_average(uint8_t *buffer, uint8_t nb_val_for_ave);
+static void cumulative_moving_average(uint8_t *buffer, uint8_t nb_val_for_ave);
 static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info);
 static bool falling_edge_detection(uint8_t *img_values, uint16_t i);
 static bool rising_edge_detection(uint8_t *img_values, uint16_t i);
@@ -72,9 +94,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//image processing
-		column_extraction(image_all_colors, img_buff_ptr, COL_START);
+		column_extraction(image_all_colors, img_buff_ptr, FIRST_COL);
 		color_extraction_red(image, image_all_colors);
-		floating_average(image, AVE_NB);
+		cumulative_moving_average(image, AVE_NB);
 
 		//read the surrounding information from the bus
 		messagebus_topic_read(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
@@ -85,76 +107,78 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//publish surrounding_info after reset of line_detection bit
 		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
 		{
-			time = chVTGetSystemTime(); 				//in system ticks
-			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2S: system ticks to miliseconds
-				// Publishes it on the bus.
+			time = chVTGetSystemTime(); 					//time in system ticks
+			//reset line detection bit to 0
+			surrounding_info &= 0b01111111;
+
+			if (ST2MS(time-publish_time) >= WAIT_MS) { 		//ST2MS: system ticks to milliseconds
+				//Publishes it on the bus.
 				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-				surrounding_info_published = 0u;
-				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS)); //no line detection for 2s to pass the line
+				surrounding_info_published = surrounding_info;
+				//no line detection for 1s to pass the line
+				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS));
 			}
 		}
+
 		//publish surrounding_info after set of line_detection bit
 		if (surrounding_info & FLOOR_LINE_IN_FRONT)  {
-#ifdef DEBUG_LINE_DETECTION
-			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
-#endif
 			// Publishes it on the bus.
 			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-			publish_time = chVTGetSystemTime(); //in system ticks
+			publish_time = chVTGetSystemTime(); 			//in system ticks
 			surrounding_info_published = surrounding_info;
 		}
-
-#ifdef DEBUG_LINE_DETECTION
-		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", surrounding_info);
-#endif
 
 #ifdef DEBUG_IMAGE 	//sending image to computer for verification
 		send_to_computer(image);
 #endif
-
-	//20Hz
-	//chThdSleepUntilWindowed(time, time + MS2ST(50));
 	}
 }
 
+/* Extracts one column
+ *
+ *  input: column number (of the captured image!)
+ */
 static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col){
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE); i += 1) {
 		//2 bytes per pixel
-		image_all_colors[2*i] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i)*2];
-		image_all_colors[2*i+1] = (uint8_t) img_buff_ptr[(col-COL_START+IMAGE_COLUMN_SIZE*i)*2+1];
+		image_all_colors[2*i] = (uint8_t) img_buff_ptr[(col+IMAGE_COLUMN_SIZE*i)*2];
+		image_all_colors[2*i+1] = (uint8_t) img_buff_ptr[(col+IMAGE_COLUMN_SIZE*i)*2+1];
 	}
 }
 
 
-/* extracts the bits for red color
+/* Extracts the bits for red color
  *
- * red corresponds to the first 5bits of the first byte
- * takes nothing from the second byte
- * the color information is left at the left to get higher values
+ *  red corresponds to the first 5bits of the first byte
+ *  takes nothing from the second byte
+ *  the color information is left at the left to get higher values
  */
 static void color_extraction_red(uint8_t *image, uint8_t *image_all_colors){
 	for (uint16_t i = 0; i < (2 * IMAGE_BUFFER_SIZE); i += 2) {
 		image[i / 2] = (uint8_t) (image_all_colors[i] & 0xF8);
 	}
 }
-//-------------------------------------------- here we could add color extraction functions for blue / green
 
 
-static void floating_average(uint8_t *buffer, uint8_t nb_val_for_ave) {
+/* Cumulative Moving Average
+ *
+ *  calculate average over nb_val_for_ave numbers
+ *  the nb_val_for_ave/2 elements on the right and and the left of the buffer remain unchanged
+ */
+static void cumulative_moving_average(uint8_t *buffer, uint8_t nb_val_for_ave) {
 	uint16_t ave_sum = 0;
 	for (int i = 0; i < (IMAGE_BUFFER_SIZE - nb_val_for_ave); i++) {
-		//ignores the last nb_val_for_ave pixels
 		for (int j = 0; j < nb_val_for_ave; j++) {
 			ave_sum += buffer[i + j];
 		}
-		buffer[i] = ave_sum / nb_val_for_ave;
+		buffer[i + nb_val_for_ave/2] = ave_sum / nb_val_for_ave;
 		ave_sum = 0;
 	}
 }
 
-/*detects a colored line on white background
+/* Detects a colored line on white background
  *
- *	detection of white parts give high RGB values, colored parts low values.
+ *  detection of white parts give high RGB values, colored parts low values.
  *	so we detect a rapid decrease in the values followed by a rapid increase
  */
 static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info) {
@@ -162,8 +186,6 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
     static systime_t time_rising_edge = 0;
 
     static bool falling_edge_detected = FALSE;
-
-    surrounding_info &= 0b01111111; // reset line detection bit to 0
 
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE - ED_STEP - CHECK_STEP); i++) {
 		//falling edge
@@ -178,8 +200,10 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 				time_rising_edge = chVTGetSystemTime();
 				//line only if rising edge happened shortly after falling edge
 				if(ST2MS(time_rising_edge-time_falling_edge) < WAIT_MS) {
-					surrounding_info |= FLOOR_LINE_IN_FRONT; //set line detection bit to 1
-					falling_edge_detected = FALSE; //reset falling edge information
+					//set line detection bit to 1
+					surrounding_info |= FLOOR_LINE_IN_FRONT;
+					//reset falling edge information
+					falling_edge_detected = FALSE;
 				}
 			}
 		}
@@ -194,7 +218,7 @@ static bool falling_edge_detection(uint8_t *img_values, uint16_t i) {
 	}
 	//no edge if there's an edge in the other direction within less than CHECK_STEP pixels
 	else if ((img_values[i + ED_STEP + CHECK_STEP] > img_values[i + ED_STEP]) &&
-			 (img_values[i+ED_STEP+CHECK_STEP]-img_values[i+ED_STEP]) > 2*EDGE_HEIGHT_MIN) {
+			 (img_values[i+ED_STEP+CHECK_STEP]-img_values[i+ED_STEP]) > EDGE_HEIGHT_MIN) {
 		return FALSE;
 	}
 	//edge detected
@@ -210,7 +234,7 @@ static bool rising_edge_detection(uint8_t *img_values, uint16_t i) {
 	}
 	//no edge if there's an edge in the other direction within less than CHECK_STEP pixels
 	else if ((img_values[i + ED_STEP + CHECK_STEP] < img_values[i + ED_STEP]) &&
-			 (img_values[i+ED_STEP] - img_values[i+ED_STEP+CHECK_STEP]) > 2*EDGE_HEIGHT_MIN) {
+			 (img_values[i+ED_STEP] - img_values[i+ED_STEP+CHECK_STEP]) > EDGE_HEIGHT_MIN) {
 		return FALSE;
 	}
 	//edge detected
