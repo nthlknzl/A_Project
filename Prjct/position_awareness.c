@@ -80,7 +80,7 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 }
 
 void situational_awareness_thread_start(void){
-	chThdCreateStatic(waSituationalAwareness, sizeof(waSituationalAwareness), NORMALPRIO+20, SituationalAwareness, NULL);
+	chThdCreateStatic(waSituationalAwareness, sizeof(waSituationalAwareness), NORMALPRIO+2, SituationalAwareness, NULL);
 }
 
 /*

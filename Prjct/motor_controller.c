@@ -141,6 +141,6 @@ void update_motors( void ){
  * Start the thread
  */
 void motor_controller_start(void){
-	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+20, MotorController, NULL);
+	chThdCreateStatic(waMotorController, sizeof(waMotorController), NORMALPRIO+4, MotorController, NULL);
 }
 

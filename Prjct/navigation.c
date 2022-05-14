@@ -47,7 +47,7 @@ static THD_FUNCTION(NavigationThd, arg) {
         // the motor modes only need to be updated if there is new information
 
         // the following lines decide what to do based on the walls and lines detected. This can be modified to
-        // change the robots behaviour
+        // change the robots behavior
         if (wall_info & WALL_IN_FRONT_BIT){
         	command_emergency_stop_and_search();
         }
@@ -71,7 +71,7 @@ static THD_FUNCTION(NavigationThd, arg) {
  * Start the thread
  */
 void navigation_thread_start(void){
-	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+4, NavigationThd, NULL);
+	chThdCreateStatic(waNavigation, sizeof(waNavigation), NORMALPRIO+6, NavigationThd, NULL);
 }
 
 
