@@ -27,7 +27,7 @@ extern messagebus_t bus;
 #define	EDGE_HEIGHT_MIN 		50
 
 //for debugging
-#define DEBUG_IMAGE
+//#define DEBUG_IMAGE
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
