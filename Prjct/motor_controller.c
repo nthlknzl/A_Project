@@ -44,7 +44,7 @@ static THD_FUNCTION(MotorController, arg) {
 
     systime_t time;
     // read the current state in the bus.
-    enum motion_state state; // variable to store the state - read from the message bus
+    motion_state state; // variable to store the state - read from the message bus
     messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");
 
     while(1){
@@ -102,10 +102,10 @@ void stop_motors( void ){
 /* sets the speed_left and speed_right for a turn
  * @input turn_direction tirection : enum with the values LEFT or RIGHT determining which way to turn
  */
-void turn(turn_direction direction){
+void turn(motion_state direction){
 	switch(direction){
-		case LEFT: speed_left = BASE_SPEED; speed_right = -BASE_SPEED; break;
-		case RIGHT: speed_left = -BASE_SPEED; speed_right = BASE_SPEED; break;
+		case LEFT_TURN: speed_left = BASE_SPEED; speed_right = -BASE_SPEED; break;
+		case RIGHT_TURN: speed_left = -BASE_SPEED; speed_right = BASE_SPEED; break;
 	}
 }
 
@@ -129,13 +129,13 @@ void update_motors( void ){
  * @ input enum motion_state state : the current state (forward, left_turn, right_turn, or stop) of the system
  * The function updates updates the variables speed_left and speed_right according to the current state.
  */
-void update_speed( enum motion_state state){
+void update_speed(motion_state state){
     // check state and execute it - this sets the motor speed variables
     switch(state){
     	case FORWARD_MOTION: control_forward_motion(); break;
     	case STOP: stop_motors(); break;
-    	case LEFT_TURN: turn(LEFT); break;
-    	case RIGHT_TURN: turn(RIGHT); break;
+    	case LEFT_TURN: turn(LEFT_TURN); break;
+    	case RIGHT_TURN: turn(RIGHT_TURN); break;
     	default: control_forward_motion(); // in case there's an undefined state somewhere.
         }
 }
@@ -164,7 +164,7 @@ void motor_controller_test( void ){
 	 */
 
 	// init the messagebus
-	enum motion_state initital_state = FORWARD_MOTION;
+	motion_state initital_state = FORWARD_MOTION;
 	messagebus_topic_t motor_topic;
 	MUTEX_DECL(motor_topic_lock);
 	CONDVAR_DECL(motor_topic_condvar);
@@ -234,7 +234,7 @@ void motor_controller_test( void ){
 
 	//navigation_thread_start();
 
-	enum motion_state state = FORWARD_MOTION;
+	motion_state state = FORWARD_MOTION;
 	messagebus_topic_publish(&motor_topic, &state, sizeof(state));
 	chThdSleepMicroseconds(1000000);
 

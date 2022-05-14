@@ -68,7 +68,7 @@ int main(void)
 	init_proximity_sensors();
 
 	// init the messagebus
-		enum motion_state initital_state = FORWARD_MOTION;
+		motion_state initital_state = FORWARD_MOTION;
 		messagebus_topic_t motor_topic;
 		MUTEX_DECL(motor_topic_lock);
 		CONDVAR_DECL(motor_topic_condvar);

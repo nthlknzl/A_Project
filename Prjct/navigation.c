@@ -31,7 +31,7 @@
 
 extern messagebus_t bus;
 
-static enum motion_state motor_state = STOP;
+static motion_state motor_state = STOP;
 
 
 static THD_WORKING_AREA(waNavigation, 256);
@@ -83,7 +83,7 @@ void navigation_thread_start(void){
  * 		2. turn on the spot
  * 		3. drive forward (to go back into the street)
  */
-void command_turn(enum motion_state direction){
+void command_turn(motion_state direction){
 	// pointer to the bus topic to write to the motors
 
 	// 1. go forward
@@ -116,7 +116,7 @@ void command_turn(enum motion_state direction){
 	//chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
 }
 
-void command_motor( enum motion_state command ){
+void command_motor(motion_state command ){
 	// pointer to the bus topic to write to the motors
 	motor_state = command;
 	messagebus_topic_t *state_topic = messagebus_find_topic_blocking(&bus, "/motor_state");

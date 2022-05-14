@@ -1,7 +1,7 @@
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
-#include <motor_controller.h> // for the state enum
+//#include <motor_controller.h> // for the state enum
 
 typedef uint8_t surrounding; // stores the information about walls in proximity. The four used bits are described below
 
@@ -13,11 +13,13 @@ typedef uint8_t surrounding; // stores the information about walls in proximity.
 #define FLOOR_LINE_IN_FRONT 0b10000000
 
 // State of motion: This is used to set the motor_controller mode
-enum motion_state {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN};
+typedef enum {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN} motion_state;
+//typedef enum {LEFT, RIGHT} turn_direction;
+
 enum detection_state {NOTHING_DETECTED, EDGE_DETECTED, LINE_DETECTED, RED_DETECTED};
 
 void navigation_thread_start(void);
-void command_turn(enum motion_state direction); // command a left or right turn
-void command_motor( enum motion_state command ); // send a command to the motor
+void command_turn(motion_state direction); // command a left or right turn
+void command_motor(motion_state command ); // send a command to the motor
 
 #endif

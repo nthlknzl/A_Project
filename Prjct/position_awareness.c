@@ -20,6 +20,8 @@
 
 #define IR_SENSOR_THRESHOLD 100 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 800
+
+#define MAX_LR_ERROR 1000// max value of the left-right error
 // static variables
 extern messagebus_t bus;
 
@@ -38,6 +40,8 @@ static THD_FUNCTION(SituationalAwareness, arg) {
         time = chVTGetSystemTime();
 
 	#ifdef DEBUG_PROX
+        // print the values of the sensors for debug purposes.
+        // !!! this needs to be disabled if the camera python script is used
         int16_t debug_left_value = get_prox(IR_SENSOR_LEFT_CENTER);
         int16_t debug_right_value = get_prox(IR_SENSOR_RIGHT_CENTER);
         chprintf((BaseSequentialStream *)&SD3, "left: %d right: %d \r\n", debug_left_value, debug_right_value);
@@ -46,6 +50,7 @@ static THD_FUNCTION(SituationalAwareness, arg) {
 		// read the surrounding information from the bus
 		messagebus_topic_t *surrounding_topic = messagebus_find_topic(&bus, "/surrounding");
 		messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
+
         // reset wall information (bit 1-3) to 0 without changing line information
 		wall_info &= 0b11111000;
 
@@ -78,7 +83,13 @@ void situational_awareness_thread_start(void){
 	chThdCreateStatic(waSituationalAwareness, sizeof(waSituationalAwareness), NORMALPRIO+20, SituationalAwareness, NULL);
 }
 
-
+/*
+ * This function returns the error in the position of the e-puck relative to the center between the walls left and right
+ * Some important considerations are
+ * 		1. if there's no wall on one side the e-puck tries to have a constant distance to the other wall
+ * 		2. if there are no walls the returned error is 0
+ * 		3. The error is capped at MAX_LR_ERROR in order to compensate the non-linearity of the sensors resulting in extreamly high error values.
+ * */
 int16_t get_left_right_error( void ){
 	// store the found walls
 
@@ -112,8 +123,8 @@ int16_t get_left_right_error( void ){
 	}
 
 	// we limit the maximal error as the values get extremely high at close distances -> no effective control possible.
-	if (error > 1000){error = 1000;}
-	else if (error < -1000){error = -1000;}
+	if (error > MAX_LR_ERROR){error = MAX_LR_ERROR;}
+	else if (error < -MAX_LR_ERROR){error = -MAX_LR_ERROR;}
 	return error;
 
 }
