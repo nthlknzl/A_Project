@@ -11,7 +11,27 @@
 
 extern messagebus_t bus;
 
+//constants for image capture
+#define IMAGE_BUFFER_SIZE		480	//nb of pixels in one column
+#define IMAGE_BUFFER_SIZE_SEND	640	//the python file works with a buffer size of 640
+#define IMAGE_COLUMN_SIZE		2 	//2 pixels per column
+#define COL_START				320
+#define LIN_START				0
+
+//constants for general image procession
+#define AVE_NB 	30
 #define FIRST_COL 0
+
+//constants for line detection
+#define ED_STEP 				40
+#define CHECK_STEP 				40
+#define	EDGE_HEIGHT_MIN 		60
+
+//wait after line detection
+#define WAIT_MS 1000
+
+//for debugging
+//#define DEBUG_IMAGE
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -84,14 +104,14 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//line detection
 		surrounding_info = line_detection(image, surrounding_info);
 
-		//publish surrounding_info after reset of line_detection bit (which happens in line detection function)
+		//publish surrounding_info after reset of line_detection bit
 		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
 		{
 			time = chVTGetSystemTime(); 					//time in system ticks
 			//reset line detection bit to 0
 			surrounding_info &= 0b01111111;
 
-			if (ST2MS(time-publish_time) >= WAIT_MS) { 		//ST2MS: system ticks to miliseconds
+			if (ST2MS(time-publish_time) >= WAIT_MS) { 		//ST2MS: system ticks to milliseconds
 				//Publishes it on the bus.
 				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
 				surrounding_info_published = surrounding_info;
@@ -102,18 +122,11 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//publish surrounding_info after set of line_detection bit
 		if (surrounding_info & FLOOR_LINE_IN_FRONT)  {
-#ifdef DEBUG_LINE_DETECTION
-			chprintf((BaseSequentialStream *)&SD3, "line detected. \r\n");
-#endif
 			// Publishes it on the bus.
 			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-			publish_time = chVTGetSystemTime(); //in system ticks
+			publish_time = chVTGetSystemTime(); 			//in system ticks
 			surrounding_info_published = surrounding_info;
 		}
-
-#ifdef DEBUG_LINE_DETECTION
-		chprintf((BaseSequentialStream *)&SD3, "detection state: %i \r\n", surrounding_info);
-#endif
 
 #ifdef DEBUG_IMAGE 	//sending image to computer for verification
 		send_to_computer(image);
