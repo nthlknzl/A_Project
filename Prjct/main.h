@@ -9,18 +9,10 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 
-
-/*
-#define NOTHING_DETECTED 		0
-#define RISING_EDGE_DETECTED 	1
-#define FALLING_EDGE_DETECTED 	1
-#define	LINE_DETECTED 			2
-*/
-
 //constants for process_image.c: image capture
-#define IMAGE_BUFFER_SIZE		480// 480 pixels in one column
-#define IMAGE_BUFFER_SIZE_SEND	640// 480 pixels in one column
-#define IMAGE_COLUMN_SIZE		2 // 2 pixels per column
+#define IMAGE_BUFFER_SIZE		480	//nb of pixels in one column
+#define IMAGE_BUFFER_SIZE_SEND	640	//the python file works with a buffer size of 640
+#define IMAGE_COLUMN_SIZE		2 	//2 pixels per column
 #define COL_START				320
 #define LIN_START				0
 

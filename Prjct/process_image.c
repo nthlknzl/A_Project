@@ -87,12 +87,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//publish surrounding_info after reset of line_detection bit (which happens in line detection function)
 		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
 		{
-			time = chVTGetSystemTime(); 				//in system ticks
-			if (ST2MS(time-publish_time) >= WAIT_MS) { 	//ST2MS: system ticks to miliseconds
-				// Publishes it on the bus.
+			time = chVTGetSystemTime(); 					//time in system ticks
+			//reset line detection bit to 0
+			surrounding_info &= 0b01111111;
+
+			if (ST2MS(time-publish_time) >= WAIT_MS) { 		//ST2MS: system ticks to miliseconds
+				//Publishes it on the bus.
 				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-				surrounding_info_published = 0u;
-				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS)); //no line detection for 1s to pass the line
+				surrounding_info_published = surrounding_info;
+				//no line detection for 1s to pass the line
+				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS));
 			}
 		}
 
@@ -119,7 +123,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 /* Extracts one column
  *
- *  input: column nb (of the captured image!) -> default value 0 = first captured column
+ *  input: column number (of the captured image!)
  */
 static void column_extraction(uint8_t *image_all_colors, uint8_t *img_buff_ptr, uint16_t col){
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE); i += 1) {
@@ -170,8 +174,6 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 
     static bool falling_edge_detected = FALSE;
 
-    surrounding_info &= !FLOOR_LINE_IN_FRONT; // reset line detection bit to 0
-
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE - ED_STEP - CHECK_STEP); i++) {
 		//falling edge
 		if (img_values[i] > img_values[i + ED_STEP]) {
@@ -185,8 +187,10 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 				time_rising_edge = chVTGetSystemTime();
 				//line only if rising edge happened shortly after falling edge
 				if(ST2MS(time_rising_edge-time_falling_edge) < WAIT_MS) {
-					surrounding_info |= FLOOR_LINE_IN_FRONT; //set line detection bit to 1
-					falling_edge_detected = FALSE; //reset falling edge information
+					//set line detection bit to 1
+					surrounding_info |= FLOOR_LINE_IN_FRONT;
+					//reset falling edge information
+					falling_edge_detected = FALSE;
 				}
 			}
 		}
