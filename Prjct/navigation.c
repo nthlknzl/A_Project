@@ -17,7 +17,7 @@
 #define TURN_TIME 600000 // in us
 #define AFTER_TURN_FORWARD_DELAY_TICKS 40// in 25ms, must be <255
 #define SLEEP_TIME_AFTER_COMMAND 500000
-
+#define WAIT_TIME_AFTER_STOP 2000 // in ms
 /* General concept
  * ---------------
  *
@@ -49,7 +49,7 @@ static THD_FUNCTION(NavigationThd, arg) {
         // the following lines decide what to do based on the walls and lines detected. This can be modified to
         // change the robots behaviour
         if (wall_info & WALL_IN_FRONT_BIT){
-        	command_motor(STOP);
+        	command_emergency_stop_and_search();
         }
         else if (wall_info & FLOOR_LINE_IN_FRONT){
         	command_motor(STOP);
@@ -107,12 +107,18 @@ void command_turn(motion_state direction){
         surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
         messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
         if (wall_info & WALL_IN_FRONT_BIT){
-        	command_motor(STOP);
+        	command_emergency_stop_and_search();
         	return;
         }
 		chThdSleepUntilWindowed(time, time + MS2ST(25));
 	}
 	//chThdSleepMicroseconds(FORWARD_TIME_AFTER_TURN); // avoid imediately perfoming a 2nd turn
+}
+
+void command_starp_turn(motion_state direction){
+	// turn 90deg in direction on the spot
+	command_motor(direction);
+	chThdSleepMicroseconds(TURN_TIME); // wait a certain time for the robot to turn
 }
 
 void command_motor(motion_state command ){
@@ -123,6 +129,27 @@ void command_motor(motion_state command ){
 
 	//chThdSleepMicroseconds(SLEEP_TIME_AFTER_COMMAND);
 
+}
+
+void command_emergency_stop_and_search( void ){
+	command_motor(STOP);
+	surrounding wall_info = 0u;
+	chThdSleepMilliseconds(WAIT_TIME_AFTER_STOP);
+    messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
+	messagebus_topic_read(surrounding_topic, &wall_info, sizeof(wall_info));
+	if (wall_info & WALL_IN_FRONT_BIT){
+		if( (wall_info & WALL_LEFT_BIT) == 0u ){
+			command_starp_turn(RIGHT_TURN);
+	    }
+	    else if( (wall_info & WALL_RIGHT_BIT) == 0u ){
+	    	command_starp_turn(LEFT_TURN);
+	    }
+	    else{
+	    	command_starp_turn(LEFT_TURN);
+	        command_starp_turn(LEFT_TURN);
+	    }
+	 }
+	 command_motor(FORWARD_MOTION); // continue driving forward after the turn or removal of the object
 }
 
 

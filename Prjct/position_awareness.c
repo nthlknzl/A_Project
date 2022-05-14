@@ -18,7 +18,7 @@
 #define IR_SENSOR_LEFT_FRONT 7u
 #define IR_SENSOR_RIGHT_FRONT 0u
 
-#define IR_SENSOR_THRESHOLD 100 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
+#define IR_SENSOR_THRESHOLD 80 // if the ir sensor measures a value lower than this threshold it assumes there's no wall on that side.
 #define IR_SENSOR_FRONT_SUM_THRESHOLD 800
 
 #define MAX_LR_ERROR 1000// max value of the left-right error

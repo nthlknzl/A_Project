@@ -15,6 +15,8 @@ typedef enum {FORWARD_MOTION, STOP, LEFT_TURN, RIGHT_TURN} motion_state;
 
 void navigation_thread_start(void);
 void command_turn(motion_state direction); // command a left or right turn
+void command_starp_turn(motion_state direction); // command a turn on the spot
 void command_motor(motion_state command ); // send a command to the motor
+void command_emergency_stop_and_search( void ); // stop the robot. take a turn if there are no obstacles there.
 
 #endif
