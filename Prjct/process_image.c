@@ -13,7 +13,7 @@ extern messagebus_t bus;
 //constants for image capture
 #define IMAGE_BUFFER_SIZE		480	//nb of pixels in one column
 #define IMAGE_BUFFER_SIZE_SEND	640	//the python file works with a buffer size of 640
-#define IMAGE_COLUMN_SIZE		2 	//2 pixels per column
+#define IMAGE_COLUMN_SIZE		2 	//2 columns
 #define COL_START				320
 #define LIN_START				0
 
@@ -22,15 +22,12 @@ extern messagebus_t bus;
 #define FIRST_COL 0
 
 //constants for line detection
-#define ED_STEP 				40
+#define ED_STEP 				50
 #define CHECK_STEP 				40
-#define	EDGE_HEIGHT_MIN 		60
-
-//wait after line detection
-#define WAIT_MS 1000
+#define	EDGE_HEIGHT_MIN 		50
 
 //for debugging
-#define DEBUG_IMAGE
+//#define DEBUG_IMAGE
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -75,12 +72,10 @@ static THD_FUNCTION(ProcessImage, arg) {
 	chRegSetThreadName(__FUNCTION__);
 	(void) arg;
 
-    systime_t time;
-    static systime_t publish_time=0;
-
 	messagebus_topic_t *surrounding_topic = messagebus_find_topic_blocking(&bus, "/surrounding");
 	surrounding surrounding_info = 0u;
-	static surrounding surrounding_info_published = 0u;
+
+	static bool surrounding_info_published = FALSE;
 
 	uint8_t *img_buff_ptr;
 	static uint8_t image_all_colors[2*IMAGE_BUFFER_SIZE] = { 0 };
@@ -103,28 +98,20 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//line detection
 		surrounding_info = line_detection(image, surrounding_info);
 
-		//publish surrounding_info after reset of line_detection bit
-		if(surrounding_info_published & FLOOR_LINE_IN_FRONT)
-		{
-			time = chVTGetSystemTime(); 					//time in system ticks
-			//reset line detection bit to 0
-			surrounding_info &= 0b01111111;
-
-			if (ST2MS(time-publish_time) >= WAIT_MS) { 		//ST2MS: system ticks to milliseconds
-				//Publishes it on the bus.
-				messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-				surrounding_info_published = surrounding_info;
-				//no line detection for 1s to pass the line
-				chThdSleepUntilWindowed(time, time + MS2ST(WAIT_MS));
-			}
-		}
-
 		//publish surrounding_info after set of line_detection bit
-		if (surrounding_info & FLOOR_LINE_IN_FRONT)  {
+		if (surrounding_info & FLOOR_LINE_IN_FRONT) {
 			// Publishes it on the bus.
 			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
-			publish_time = chVTGetSystemTime(); 			//in system ticks
-			surrounding_info_published = surrounding_info;
+			surrounding_info_published = TRUE;
+		}
+
+		/* if the surrounding info has been published after line detection, and no line is detected anymore,
+		 * it must be published that there isn't a line anymore.
+		 */
+		if (surrounding_info_published && (surrounding_info & FLOOR_LINE_IN_FRONT)== 0u) {
+			// Publishes it on the bus.
+			messagebus_topic_publish(surrounding_topic, &surrounding_info, sizeof(surrounding_info));
+			surrounding_info_published = FALSE;
 		}
 
 #ifdef DEBUG_IMAGE 	//sending image to computer for verification
@@ -186,6 +173,9 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 
     static bool falling_edge_detected = FALSE;
 
+	//reset line detection bit to 0
+	surrounding_info &= 0b01111111;
+
 	for (uint16_t i = 0; i < (IMAGE_BUFFER_SIZE - ED_STEP - CHECK_STEP); i++) {
 		//falling edge
 		if (img_values[i] > img_values[i + ED_STEP]) {
@@ -197,8 +187,8 @@ static uint8_t line_detection(uint8_t *img_values, surrounding surrounding_info)
 		} else {
 			if (rising_edge_detection(img_values, i) && falling_edge_detected) {
 				time_rising_edge = chVTGetSystemTime();
-				//line only if rising edge happened shortly after falling edge
-				if(ST2MS(time_rising_edge-time_falling_edge) < WAIT_MS) {
+				//line only if rising edge happened less than 1s after falling edge
+				if(ST2S(time_rising_edge-time_falling_edge) < 1) {
 					//set line detection bit to 1
 					surrounding_info |= FLOOR_LINE_IN_FRONT;
 					//reset falling edge information
@@ -261,8 +251,8 @@ static void send_to_computer(uint8_t *image) {
 }
 
 void process_image_start(void) {
-	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO+10,
+	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO+2,
 			ProcessImage, NULL);
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO+10,
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO,
 			CaptureImage, NULL);
 }
